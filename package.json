@@ -1,0 +1,21 @@
+{
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r run build",
+    "lint": "eslint --cache .",
+    "lint:fix": "pnpm run lint --fix",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "release": "bumpp"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^7.2.0",
+    "@types/node": "^25.0.10",
+    "bumpp": "^10.4.0",
+    "eslint": "^9.39.2",
+    "tsdown": "^0.20.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
