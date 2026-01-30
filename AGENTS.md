@@ -1,0 +1,4 @@
+- never fix lint error
+- always fix type error
+- core module need unit test, and do not test the third-party module
+- esm module export is better than class

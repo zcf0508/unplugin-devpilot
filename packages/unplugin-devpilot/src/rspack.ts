@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Rspack plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```js
  * // rspack.config.js
- * import Starter from 'unplugin-devpilot/rspack'
+ * import devpilot from 'unplugin-devpilot/rspack'
  *
  * export default {
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * }
  * ```
  */
-const rspack = Starter.rspack as typeof Starter.rspack;
+const rspack = unpluginDevpilot.rspack as typeof unpluginDevpilot.rspack;
 export default rspack;
 export { rspack as 'module.exports' };

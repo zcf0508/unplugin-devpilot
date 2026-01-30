@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Webpack plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```js
  * // webpack.config.js
- * import Starter from 'unplugin-devpilot/webpack'
+ * import devpilot from 'unplugin-devpilot/webpack'
  *
  * export default {
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * }
  * ```
  */
-const webpack = Starter.webpack as typeof Starter.webpack;
+const webpack = unpluginDevpilot.webpack as typeof unpluginDevpilot.webpack;
 export default webpack;
 export { webpack as 'module.exports' };

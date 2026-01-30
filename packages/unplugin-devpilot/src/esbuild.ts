@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Esbuild plugin
@@ -12,11 +12,11 @@ import { Starter } from './index';
  * @example
  * ```ts
  * import { build } from 'esbuild'
- * import Starter from 'unplugin-devpilot/esbuild'
+ * import devpilot from 'unplugin-devpilot/esbuild'
  *
- * build({ plugins: [Starter()] })
+ * build({ plugins: [devpilot()] })
 ```
  */
-const esbuild = Starter.esbuild as typeof Starter.esbuild;
+const esbuild = unpluginDevpilot.esbuild as typeof unpluginDevpilot.esbuild;
 export default esbuild;
 export { esbuild as 'module.exports' };

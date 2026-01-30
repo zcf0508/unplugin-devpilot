@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Rolldown plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```ts
  * // rolldown.config.js
- * import Starter from 'unplugin-devpilot/rolldown'
+ * import devpilot from 'unplugin-devpilot/rolldown'
  *
  * export default {
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * }
  * ```
  */
-const rolldown = Starter.rolldown as typeof Starter.rolldown;
+const rolldown = unpluginDevpilot.rolldown as typeof unpluginDevpilot.rolldown;
 export default rolldown;
 export { rolldown as 'module.exports' };

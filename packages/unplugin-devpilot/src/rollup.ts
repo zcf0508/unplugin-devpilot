@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Rollup plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```ts
  * // rollup.config.js
- * import Starter from 'unplugin-devpilot/rollup'
+ * import devpilot from 'unplugin-devpilot/rollup'
  *
  * export default {
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * }
  * ```
  */
-const rollup = Starter.rollup as typeof Starter.rollup;
+const rollup = unpluginDevpilot.rollup as typeof unpluginDevpilot.rollup;
 export default rollup;
 export { rollup as 'module.exports' };

@@ -1,24 +1,13 @@
-import type { FilterPattern } from 'unplugin';
-
 export interface Options {
-  include?: FilterPattern
-  exclude?: FilterPattern
-  enforce?: 'pre' | 'post' | undefined
+  wsPort?: number
+  mcpPort?: number
 }
 
-type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> & U;
-
-export type OptionsResolved = Overwrite<
-  Required<Options>,
-  Pick<Options, 'enforce'>
->;
+export type OptionsResolved = Required<Options>;
 
 export function resolveOptions(options: Options): OptionsResolved {
   return {
-    include: options.include || [/\.[cm]?[jt]sx?$/],
-    exclude: options.exclude || [/node_modules/],
-    enforce: 'enforce' in options
-      ? options.enforce
-      : 'pre',
+    wsPort: options.wsPort || 3100,
+    mcpPort: options.mcpPort || 3101,
   };
 }

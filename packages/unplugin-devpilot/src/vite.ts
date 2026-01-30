@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Vite plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```ts
  * // vite.config.ts
- * import Starter from 'unplugin-devpilot/vite'
+ * import devpilot from 'unplugin-devpilot/vite'
  *
  * export default defineConfig({
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * })
  * ```
  */
-const vite = Starter.vite as typeof Starter.vite;
+const vite = unpluginDevpilot.vite as typeof unpluginDevpilot.vite;
 export default vite;
 export { vite as 'module.exports' };

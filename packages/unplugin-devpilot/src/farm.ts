@@ -4,7 +4,7 @@
  * @module
  */
 
-import { Starter } from './index';
+import { unpluginDevpilot } from './index';
 
 /**
  * Farm plugin
@@ -12,13 +12,13 @@ import { Starter } from './index';
  * @example
  * ```ts
  * // farm.config.js
- * import Starter from 'unplugin-devpilot/farm'
+ * import devpilot from 'unplugin-devpilot/farm'
  *
  * export default {
- *   plugins: [Starter()],
+ *   plugins: [devpilot()],
  * }
  * ```
  */
-const farm = Starter.farm as typeof Starter.farm;
+const farm = unpluginDevpilot.farm as typeof unpluginDevpilot.farm;
 export default farm;
 export { farm as 'module.exports' };
