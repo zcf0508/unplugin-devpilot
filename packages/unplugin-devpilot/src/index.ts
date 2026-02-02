@@ -1,7 +1,7 @@
 import type { UnpluginInstance } from 'unplugin';
 import type { DevpilotPlugin, Options, OptionsResolved } from './core/options';
 import { createUnplugin } from 'unplugin';
-import { startMcpServer, stopMcpServer } from './core/mcp-server';
+import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
@@ -48,6 +48,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       serversStarted = true;
       // Register plugin server methods before starting WebSocket server
       registerPluginServerMethods(options.plugins);
+      // Register plugin mcp register methods before starting WebSocket server
+      registerPluginMcpRegisterMethods(options.plugins);
       startWebSocketServer(options.wsPort);
       await startMcpServer(options.mcpPort);
     }
@@ -120,5 +122,6 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 export default unpluginDevpilot;
 export type { DevpilotPlugin, Options } from './core/options';
 export type { DevpilotPluginContext } from './core/plugin';
+export { defineMcpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
 export * from './core/types';

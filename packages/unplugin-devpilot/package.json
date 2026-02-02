@@ -60,16 +60,16 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
+    "unplugin": "^3.0.0"
+  },
+  "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
+    "@types/ws": "^8.18.1",
     "birpc": "^4.0.0",
     "es-toolkit": "^1.44.0",
     "hookable": "^6.0.1",
     "mitt": "^3.0.1",
-    "unplugin": "^3.0.0",
     "ws": "^8.19.0",
     "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@types/ws": "^8.18.1"
   }
 }
