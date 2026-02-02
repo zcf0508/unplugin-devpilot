@@ -160,6 +160,6 @@ export function getDevpilotClient<S extends Record<string, any> = ServerFunction
  * });
  * ```
  */
-export function defineRpcHandlers<T extends Record<string, (...args: any[]) => any>>(handlers: T): T {
+export function defineRpcHandlers<T extends { [K in keyof T]: (...args: any[]) => any }>(handlers: T): T {
   return handlers;
 }
