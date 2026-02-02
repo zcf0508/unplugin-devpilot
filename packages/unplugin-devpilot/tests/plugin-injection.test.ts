@@ -1,5 +1,4 @@
 import type { DevpilotPlugin } from '../src';
-import { describe, expect, it } from 'vitest';
 
 // Test plugin interface and types
 describe('plugin Server Methods Extension', () => {
