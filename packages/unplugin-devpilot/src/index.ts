@@ -23,16 +23,25 @@ function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResol
 function generateVirtualClientModule(options: OptionsResolved): string {
   const pluginModules = getPluginClientModules(options.plugins, options);
 
-  const imports = [
-    'import { initDevpilot } from \'unplugin-devpilot/client\';',
-    ...pluginModules.map(mod => `import '${mod}';`),
-  ].join('\n');
+  // Generate dynamic imports for all plugin modules
+  const importStatements = pluginModules.map((mod, index) =>
+    `import { rpcHandlers as handlers_${index} } from '${mod}';`,
+  ).join('\n');
+
+  // Generate code to collect all handlers
+  const handlerCollection = pluginModules.map((_, index) => `  ...handlers_${index},`).join('\n');
 
   return `
-${imports}
+${importStatements}
+import { initDevpilot } from 'unplugin-devpilot/client';
 
 export const wsPort = ${options.wsPort};
-export const client = initDevpilot({ wsPort });
+export const client = initDevpilot({
+  wsPort,
+  rpcHandlers: {
+${handlerCollection}
+  }
+});
 `;
 }
 
@@ -120,6 +129,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   });
 
 export default unpluginDevpilot;
+export type { RpcHandlers } from './client/types';
+export { clientManager } from './core/client-manager';
 export type { DevpilotPlugin, Options } from './core/options';
 export type { DevpilotPluginContext } from './core/plugin';
 export { defineMcpToolRegister } from './core/plugin';

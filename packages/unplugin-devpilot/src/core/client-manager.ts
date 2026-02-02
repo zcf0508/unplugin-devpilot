@@ -3,10 +3,10 @@ import type { WebSocket } from 'ws';
 import type { ClientFunctions, ClientInfo, PendingTask, ServerFunctions } from './types';
 import { uniqueId } from 'es-toolkit/compat';
 
-export interface ClientConnection {
+export interface ClientConnection<T extends Record<string, any> = object> {
   ws: WebSocket
   info: ClientInfo
-  rpc: BirpcReturn<ClientFunctions, ServerFunctions>
+  rpc: BirpcReturn<ClientFunctions & T, ServerFunctions>
 }
 
 export class ClientManager {
@@ -42,8 +42,8 @@ export class ClientManager {
     }
   }
 
-  getClient(clientId: string): ClientConnection | undefined {
-    return this.clients.get(clientId);
+  getClient<T extends Record<string, any> = object>(clientId: string): ClientConnection<T> | undefined {
+    return this.clients.get(clientId) as ClientConnection<T> | undefined;
   }
 
   getAllClients(activeOnly = true): ClientInfo[] {

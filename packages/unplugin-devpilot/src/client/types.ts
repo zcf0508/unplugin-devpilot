@@ -24,4 +24,5 @@ export interface DevpilotClient<S extends Record<string, any> = ServerFunctions>
 export interface DevpilotClientOptions {
   wsPort: number
   rpcHandlers?: Partial<RpcHandlers>
+  extendRpcHandlers?: Record<string, (...args: any[]) => any>
 }

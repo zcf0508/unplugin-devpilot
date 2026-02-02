@@ -18,7 +18,7 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
   const connectedCallbacks = new Set<() => void>();
   const disconnectedCallbacks = new Set<() => void>();
 
-  // Create rpcHandlers by merging default implementations with custom handlers
+  // Create rpcHandlers by merging default implementations with custom handlers and extended handlers
   const rpcHandlers = {
     notifyTaskUpdate(count: number) {
       window.dispatchEvent(new CustomEvent('devpilot:taskUpdate', { detail: { count } }));
@@ -30,6 +30,8 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
     },
     // Merge any additional custom handlers
     ...customHandlers,
+    // Merge extended handlers from plugins
+    ...(options.extendRpcHandlers || {}),
   } as RpcHandlers;
 
   function connect(): void {
@@ -57,10 +59,19 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
 
         if (data.t === 'q' && data.m && data.m in rpcHandlers) {
           const handler = rpcHandlers[data.m as keyof RpcHandlers];
-          const result = (handler as (...args: unknown[]) => unknown)(...(data.a || []));
-          if (data.i) {
-            ws?.send(JSON.stringify({ t: 's', i: data.i, r: result }));
-          }
+          Promise.resolve((handler as (...args: unknown[]) => unknown)(...(data.a || [])))
+            .then((result) => {
+              if (data.i) {
+                ws?.send(JSON.stringify({ t: 's', i: data.i, r: result }));
+              }
+            })
+            .catch((error) => {
+              if (data.i) {
+                ws?.send(JSON.stringify({ t: 's', i: data.i, e: error instanceof Error
+                  ? error.message
+                  : String(error) }));
+              }
+            });
           return;
         }
 
@@ -130,4 +141,25 @@ export function initDevpilot<S extends Record<string, any> = ServerFunctions>(
 
 export function getDevpilotClient<S extends Record<string, any> = ServerFunctions>(): DevpilotClient<S> | null {
   return globalClient as DevpilotClient<S> | null;
+}
+
+/**
+ * Define and type-check RPC handlers for the client
+ * This ensures the handlers are correctly typed and will be recognized by the RPC system
+ * @param handlers - RPC handlers object that extends the base RpcHandlers
+ * @returns The handlers object (for convenience)
+ * @example
+ * ```ts
+ * export const rpcHandlers = defineRpcHandlers({
+ *   querySelector: async (selector: string) => {
+ *     // implementation
+ *   },
+ *   getDOMTree: async (maxDepth: number) => {
+ *     // implementation
+ *   }
+ * });
+ * ```
+ */
+export function defineRpcHandlers<T extends Record<string, (...args: any[]) => any>>(handlers: T): T {
+  return handlers;
 }
