@@ -25,48 +25,6 @@ export default defineConfig({
 <br></details>
 
 <details>
-<summary>Rollup</summary><br>
-
-```ts
-// rollup.config.js
-import Devpilot from 'unplugin-devpilot/rollup';
-
-export default {
-  plugins: [Devpilot()],
-};
-```
-
-<br></details>
-
-<details>
-<summary>Rolldown / tsdown</summary><br>
-
-```ts
-// rolldown.config.ts / tsdown.config.ts
-import Devpilot from 'unplugin-devpilot/rolldown';
-
-export default {
-  plugins: [Devpilot()],
-};
-```
-
-<br></details>
-
-<details>
-<summary>esbuild</summary><br>
-
-```ts
-import { build } from 'esbuild';
-import Devpilot from 'unplugin-devpilot/esbuild';
-
-build({
-  plugins: [Devpilot()],
-});
-```
-
-<br></details>
-
-<details>
 <summary>Webpack</summary><br>
 
 ```js
