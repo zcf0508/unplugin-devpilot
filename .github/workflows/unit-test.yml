@@ -32,4 +32,6 @@ jobs:
         run: pnpm run typecheck
 
       - name: Test
-        run: pnpm run test
+        run: |
+          pnpm exec playwright install
+          pnpm run test
