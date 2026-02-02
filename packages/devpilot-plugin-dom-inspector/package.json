@@ -1,0 +1,49 @@
+{
+  "name": "devpilot-plugin-dom-inspector",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Description.",
+  "author": "zcf0508 <zcf0508@live.com>",
+  "license": "MIT",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./client": "./dist/client/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*.d.ts",
+        "./*"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test-node": "vitest --config vitest-node.config.ts --run --silent",
+    "test-client": "vitest --run --silent",
+    "test": "concurrently --names client,node -c blue,yellow \"pnpm:test-client\" \"pnpm:test-node\"",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "unplugin-devpilot": "workspace:*"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@types/ws": "^8.18.1",
+    "@vitest/browser-playwright": "^4.0.18",
+    "birpc": "^4.0.0",
+    "es-toolkit": "^1.44.0",
+    "hookable": "^6.0.1",
+    "mitt": "^3.0.1",
+    "playwright": "^1.58.1",
+    "unplugin": "^3.0.0",
+    "ws": "^8.19.0",
+    "zod": "^4.3.6"
+  }
+}

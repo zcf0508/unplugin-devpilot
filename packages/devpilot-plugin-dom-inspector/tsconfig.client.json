@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["es2023", "dom"],
+    "moduleDetection": "force",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "paths": {
+      "unplugin-devpilot": ["../unplugin-devpilot/src/index.ts"],
+      "unplugin-devpilot/*": ["../unplugin-devpilot/src/*"],
+      "unplugin-devpilot/client": ["../unplugin-devpilot/src/client/index.ts"]
+    },
+    "resolveJsonModule": true,
+    "types": [
+      "../unplugin-devpilot/src/client/virtual.d.ts",
+      "node",
+      "vitest/globals"
+    ],
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "isolatedDeclarations": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/client", "tests/client"]
+}
