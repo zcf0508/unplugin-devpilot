@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r run build",
-    "lint": "eslint --cache .",
+    "lint": "eslint --quiet --cache .",
     "lint:fix": "pnpm run lint --fix",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
