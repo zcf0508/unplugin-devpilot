@@ -1,6 +1,26 @@
+import type { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { AnySchema, ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+
 export interface DevpilotPluginContext {
   wsPort: number
 }
+
+export type McpServerRegister = <
+  OutputArgs extends ZodRawShapeCompat | AnySchema,
+  InputArgs extends undefined | ZodRawShapeCompat | AnySchema = undefined,
+>() => ({
+  name: string
+  config: {
+    title?: string
+    description?: string
+    inputSchema?: InputArgs
+    outputSchema?: OutputArgs
+    annotations?: ToolAnnotations
+    _meta?: Record<string, unknown>
+  }
+  cb: ToolCallback<InputArgs>
+});
 
 export interface DevpilotPlugin {
   namespace: string
@@ -23,6 +43,7 @@ export interface DevpilotPlugin {
    * These methods can be called from the client via rpcCall()
    */
   serverSetup?: (ctx: DevpilotPluginContext) => Record<string, (...args: any[]) => any>
+  mcpSetup?: (ctx: DevpilotPluginContext) => Array<McpServerRegister>
 }
 
 export interface Options {

@@ -1,4 +1,6 @@
 import type { Server } from 'node:http';
+import type { DevpilotPlugin } from '../plugin';
+import type { McpServerRegister } from './options';
 import { createServer } from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -7,6 +9,29 @@ import { version } from '../../package.json';
 import { clientManager } from './client-manager';
 
 let httpServer: Server | null = null;
+
+// Store plugin server methods
+let mcpRegeisterMethods: Record<string, McpServerRegister[]> = {};
+
+/**
+ * Register plugin server methods
+ */
+export function registerPluginServerMethods(plugins: DevpilotPlugin[]): void {
+  const ctx = { wsPort: 0 }; // Will be updated when starting server
+  mcpRegeisterMethods = {};
+
+  for (const plugin of plugins) {
+    if (plugin.mcpSetup) {
+      try {
+        const mcps = plugin.mcpSetup(ctx);
+        mcpRegeisterMethods[plugin.namespace] = mcps;
+      }
+      catch (error) {
+        console.error(`[unplugin-devpilot] Failed to setup mcp servers for plugin ${plugin.namespace}:`, error);
+      }
+    }
+  }
+}
 
 export async function startMcpServer(port: number): Promise<Server> {
   if (httpServer) {
@@ -69,6 +94,16 @@ export async function startMcpServer(port: number): Promise<Server> {
           };
         },
       );
+
+      Object.entries(mcpRegeisterMethods).forEach(([namespace, mcpRegeisters]) => {
+        mcpRegeisters.forEach((mcpRegeister) => {
+          const { name: _name, config, cb } = mcpRegeister();
+          const name = _name.startsWith(`${namespace}/`)
+            ? _name
+            : `${namespace}/${_name}`;
+          mcpServer.registerTool(name, config, cb);
+        });
+      });
 
       const transport = new StreamableHTTPServerTransport();
       mcpServer.connect(transport);
