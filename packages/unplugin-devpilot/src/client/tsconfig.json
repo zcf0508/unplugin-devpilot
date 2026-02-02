@@ -5,6 +5,6 @@
     "lib": ["es2023", "dom"],
     "types": []
   },
-  "include": ["."],
+  "include": [".", ".."],
   "exclude": ["virtual.d.ts"]
 }

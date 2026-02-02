@@ -6,6 +6,7 @@ export default defineConfig([
     entry: [
       'src/*.ts',
     ],
+    dts: true,
   },
   {
     entry: [
