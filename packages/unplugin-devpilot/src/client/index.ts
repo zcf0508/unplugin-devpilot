@@ -1,7 +1,7 @@
 import type { ServerFunctions } from '../core/types';
 import type { DevpilotClient, DevpilotClientOptions, RpcHandlers } from './types';
 
-export type { DevpilotClient, DevpilotClientOptions, RpcHandlers, ServerFunctions };
+export type { DevpilotClient, DevpilotClientOptions, RpcHandlers };
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 12);

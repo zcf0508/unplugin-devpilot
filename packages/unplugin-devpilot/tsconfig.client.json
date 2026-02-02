@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["es2023"],
+    "lib": ["es2023", "dom"],
     "moduleDetection": "force",
     "module": "preserve",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": ["node", "vitest/globals"],
+    "types": [],
     "strict": true,
     "noUnusedLocals": true,
     "declaration": true,
@@ -16,6 +16,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src", "tests"],
-  "exclude": ["tests/fixtures", "src/client"]
+  "include": ["src/client"],
+  "exclude": ["src/client/virtual.d.ts"]
 }
