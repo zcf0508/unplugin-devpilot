@@ -118,6 +118,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   });
 
 export default unpluginDevpilot;
-export type { DevpilotPlugin, DevpilotPluginContext, Options } from './core/options';
+export type { DevpilotPlugin, Options } from './core/options';
+export type { DevpilotPluginContext } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
 export * from './core/types';

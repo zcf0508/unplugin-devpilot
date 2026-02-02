@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
-import type { DevpilotPlugin } from '../plugin';
-import type { McpServerRegister } from './options';
+import type { DevpilotPlugin } from './options';
+import type { McpServerRegister } from './plugin';
 import { createServer } from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
