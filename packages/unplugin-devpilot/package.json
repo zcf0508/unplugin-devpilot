@@ -26,6 +26,7 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./api": "./dist/api.mjs",
+    "./client": "./dist/client/index.mjs",
     "./esbuild": "./dist/esbuild.mjs",
     "./farm": "./dist/farm.mjs",
     "./rolldown": "./dist/rolldown.mjs",
@@ -33,6 +34,9 @@
     "./rspack": "./dist/rspack.mjs",
     "./vite": "./dist/vite.mjs",
     "./webpack": "./dist/webpack.mjs",
+    "./virtual": {
+      "types": "./dist/client/virtual.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
@@ -62,6 +66,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
     "birpc": "^4.0.0",
+    "es-toolkit": "^1.44.0",
+    "hookable": "^6.0.1",
+    "mitt": "^3.0.1",
     "unplugin": "^3.0.0",
     "ws": "^8.19.0",
     "zod": "^4.3.6"

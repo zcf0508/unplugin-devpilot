@@ -16,6 +16,9 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
+  "references": [
+    { "path": "./src/client" }
+  ],
   "include": ["src", "tests"],
-  "exclude": ["tests/fixtures"]
+  "exclude": ["tests/fixtures", "src/client"]
 }

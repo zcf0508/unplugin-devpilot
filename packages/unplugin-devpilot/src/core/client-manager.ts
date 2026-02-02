@@ -1,6 +1,7 @@
 import type { BirpcReturn } from 'birpc';
 import type { WebSocket } from 'ws';
 import type { ClientFunctions, ClientInfo, PendingTask, ServerFunctions } from './types';
+import { uniqueId } from 'es-toolkit/compat';
 
 export interface ClientConnection {
   ws: WebSocket
@@ -13,7 +14,7 @@ export class ClientManager {
   private taskQueue: PendingTask[] = [];
 
   generateClientId(): string {
-    return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return uniqueId('c_');
   }
 
   addClient(clientId: string, ws: WebSocket, rpc: BirpcReturn<ClientFunctions, ServerFunctions>): ClientInfo {

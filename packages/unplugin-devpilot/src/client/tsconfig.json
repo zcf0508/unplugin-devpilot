@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["es2023", "dom"],
+    "types": []
+  },
+  "include": ["."],
+  "exclude": ["virtual.d.ts"]
+}
