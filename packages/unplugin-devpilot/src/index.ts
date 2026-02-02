@@ -3,7 +3,7 @@ import type { DevpilotPlugin, Options, OptionsResolved } from './core/options';
 import { createUnplugin } from 'unplugin';
 import { startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
-import { startWebSocketServer, stopWebSocketServer } from './core/ws-server';
+import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0virtual:devpilot-client';
@@ -46,6 +46,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
     async function startServers() {
       if (serversStarted) { return; }
       serversStarted = true;
+      // Register plugin server methods before starting WebSocket server
+      registerPluginServerMethods(options.plugins);
       startWebSocketServer(options.wsPort);
       await startMcpServer(options.mcpPort);
     }

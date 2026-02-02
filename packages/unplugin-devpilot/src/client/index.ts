@@ -1,12 +1,15 @@
+import type { ServerFunctions } from '../core/types';
 import type { DevpilotClient, DevpilotClientOptions, RpcHandlers } from './types';
 
-export type { DevpilotClient, DevpilotClientOptions, RpcHandlers };
+export type { DevpilotClient, DevpilotClientOptions, RpcHandlers, ServerFunctions };
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 12);
 }
 
-export function createDevpilotClient(options: DevpilotClientOptions): DevpilotClient {
+export function createDevpilotClient<S extends Record<string, any> = ServerFunctions>(
+  options: DevpilotClientOptions,
+): DevpilotClient<S> {
   const { wsPort, rpcHandlers: customHandlers } = options;
 
   let ws: WebSocket | null = null;
@@ -15,7 +18,8 @@ export function createDevpilotClient(options: DevpilotClientOptions): DevpilotCl
   const connectedCallbacks = new Set<() => void>();
   const disconnectedCallbacks = new Set<() => void>();
 
-  const rpcHandlers: RpcHandlers = {
+  // Create rpcHandlers by merging default implementations with custom handlers
+  const rpcHandlers = {
     notifyTaskUpdate(count: number) {
       window.dispatchEvent(new CustomEvent('devpilot:taskUpdate', { detail: { count } }));
       customHandlers?.notifyTaskUpdate?.(count);
@@ -24,7 +28,9 @@ export function createDevpilotClient(options: DevpilotClientOptions): DevpilotCl
       window.dispatchEvent(new CustomEvent('devpilot:taskCompleted', { detail: { taskId } }));
       customHandlers?.notifyTaskCompleted?.(taskId);
     },
-  };
+    // Merge any additional custom handlers
+    ...customHandlers,
+  } as RpcHandlers;
 
   function connect(): void {
     ws = new WebSocket(`ws://localhost:${wsPort}`);
@@ -108,18 +114,20 @@ export function createDevpilotClient(options: DevpilotClientOptions): DevpilotCl
       disconnectedCallbacks.add(callback);
       return () => disconnectedCallbacks.delete(callback);
     },
-  };
+  } as DevpilotClient<S>;
 }
 
-let globalClient: DevpilotClient | null = null;
+let globalClient: DevpilotClient<any> | null = null;
 
-export function initDevpilot(options: DevpilotClientOptions): DevpilotClient {
-  if (globalClient) { return globalClient; }
-  globalClient = createDevpilotClient(options)
-  ;(window as Window & { __devpilot?: DevpilotClient }).__devpilot = globalClient;
-  return globalClient;
+export function initDevpilot<S extends Record<string, any> = ServerFunctions>(
+  options: DevpilotClientOptions,
+): DevpilotClient<S> {
+  if (globalClient) { return globalClient as DevpilotClient<S>; }
+  globalClient = createDevpilotClient<S>(options);
+  (window as Window & { __devpilot?: DevpilotClient<any> }).__devpilot = globalClient;
+  return globalClient as DevpilotClient<S>;
 }
 
-export function getDevpilotClient(): DevpilotClient | null {
-  return globalClient;
+export function getDevpilotClient<S extends Record<string, any> = ServerFunctions>(): DevpilotClient<S> | null {
+  return globalClient as DevpilotClient<S> | null;
 }

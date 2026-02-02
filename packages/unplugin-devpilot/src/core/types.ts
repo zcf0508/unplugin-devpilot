@@ -26,12 +26,26 @@ export interface PendingTask {
   timestamp: number
 }
 
-export interface ServerFunctions {
+// Base server functions that can be extended by plugins
+export interface BaseServerFunctions {
   ping: () => string
   updateClientInfo: (info: Omit<ClientInfo, 'clientId' | 'connectedAt' | 'lastActiveAt'>) => void
 }
 
-export interface ClientFunctions {
+// Default empty interface for plugins to extend via module augmentation
+export interface PluginServerFunctions {}
+
+// Combined server functions type
+export type ServerFunctions = BaseServerFunctions & PluginServerFunctions;
+
+// Base client functions that can be extended by plugins
+export interface BaseClientFunctions {
   notifyTaskUpdate: (count: number) => void
   notifyTaskCompleted: (taskId: string) => void
 }
+
+// Default empty interface for plugins to extend via module augmentation
+export interface PluginClientFunctions {}
+
+// Combined client functions type
+export type ClientFunctions = BaseClientFunctions & PluginClientFunctions;

@@ -1,9 +1,33 @@
+import type { DevpilotPlugin } from './options';
 import type { ClientFunctions, ServerFunctions } from './types';
 import { createBirpc } from 'birpc';
 import { WebSocketServer } from 'ws';
 import { clientManager } from './client-manager';
 
 let wss: WebSocketServer | null = null;
+
+// Store plugin server methods
+let pluginServerMethods: Record<string, Record<string, (...args: any[]) => any>> = {};
+
+/**
+ * Register plugin server methods
+ */
+export function registerPluginServerMethods(plugins: DevpilotPlugin[]): void {
+  const ctx = { wsPort: 0 }; // Will be updated when starting server
+  pluginServerMethods = {};
+
+  for (const plugin of plugins) {
+    if (plugin.serverSetup) {
+      try {
+        const methods = plugin.serverSetup(ctx);
+        pluginServerMethods[plugin.namespace] = methods;
+      }
+      catch (error) {
+        console.error(`[unplugin-devpilot] Failed to setup server methods for plugin ${plugin.namespace}:`, error);
+      }
+    }
+  }
+}
 
 export function startWebSocketServer(port: number): WebSocketServer {
   if (wss) {
@@ -15,6 +39,12 @@ export function startWebSocketServer(port: number): WebSocketServer {
   wss.on('connection', (ws) => {
     const clientId = clientManager.generateClientId();
 
+    // Merge all plugin server methods
+    const allPluginMethods: Record<string, (...args: any[]) => any> = {};
+    for (const methods of Object.values(pluginServerMethods)) {
+      Object.assign(allPluginMethods, methods);
+    }
+
     const serverFunctions: ServerFunctions = {
       ping() {
         return 'pong';
@@ -22,6 +52,8 @@ export function startWebSocketServer(port: number): WebSocketServer {
       updateClientInfo(info) {
         clientManager.updateClientInfo(clientId, info);
       },
+      // Inject all plugin methods
+      ...allPluginMethods,
     };
 
     const rpc = createBirpc<ClientFunctions, ServerFunctions>(

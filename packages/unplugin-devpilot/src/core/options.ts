@@ -18,6 +18,11 @@ export interface DevpilotPlugin {
    * ```
    */
   clientModule?: string | ((ctx: DevpilotPluginContext) => string)
+  /**
+   * Setup server-side RPC methods for this plugin
+   * These methods can be called from the client via rpcCall()
+   */
+  serverSetup?: (ctx: DevpilotPluginContext) => Record<string, (...args: any[]) => any>
 }
 
 export interface Options {
