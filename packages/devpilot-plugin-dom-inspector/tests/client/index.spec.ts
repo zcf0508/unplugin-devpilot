@@ -1,5 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAccessibilityTree, getAccessibilityInfo, rpcHandlers } from '../../src/client/index';
+
+// Mock getDevpilotClient
+vi.mock('unplugin-devpilot/client', () => ({
+  getDevpilotClient: () => ({
+    getClientId: () => 'test_client_id',
+  }),
+  defineRpcHandlers: (handlers: any) => handlers,
+}));
 
 describe('dOM Inspector - Client Side', () => {
   beforeEach(() => {
@@ -268,6 +276,215 @@ describe('dOM Inspector - Client Side', () => {
 
         expect(result.success).toBe(true);
         expect(result.level).toBe('all');
+      });
+    });
+
+    describe('getCompactSnapshot', () => {
+      it('should return compact snapshot', async () => {
+        document.body.innerHTML = `
+          <div class="container">
+            <button id="submit-btn">Submit</button>
+            <input type="text" placeholder="Enter text">
+          </div>
+        `;
+        const result = await rpcHandlers.getCompactSnapshot(5);
+
+        expect(result.success).toBe(true);
+        expect(result.clientId).toBe('test_client_id');
+        expect(result.url).toBeDefined();
+        expect(result.title).toBeDefined();
+        expect(result.timestamp).toBeDefined();
+        expect(result.snapshot).toBeDefined();
+        expect(result.snapshot).toContain('@e');
+        expect(result.snapshot).toContain('[button]');
+        expect(result.snapshot).toContain('Submit');
+      });
+
+      it('should respect maxDepth limit', async () => {
+        document.body.innerHTML = `
+          <div id="level0">
+            <div id="level1">
+              <div id="level2">Deep</div>
+            </div>
+          </div>
+        `;
+        const result = await rpcHandlers.getCompactSnapshot(1);
+
+        expect(result.success).toBe(true);
+        // Should not include deeply nested elements
+        expect(result.snapshot).not.toContain('level2');
+      });
+
+      it('should return error on exception', async () => {
+        // Test with empty body - should still work
+        document.body.innerHTML = '';
+
+        const result = await rpcHandlers.getCompactSnapshot(5);
+
+        expect(result.success).toBe(true);
+        expect(result.snapshot).toBeDefined();
+      });
+    });
+
+    describe('clickElementById', () => {
+      it('should click element by ID', async () => {
+        document.body.innerHTML = '<button data-devpilot-id="e123">Click me</button>';
+        const button = document.querySelector('button')!;
+        const clickSpy = vi.spyOn(button, 'click');
+
+        const result = await rpcHandlers.clickElementById('e123');
+
+        expect(result.success).toBe(true);
+        expect(clickSpy).toHaveBeenCalled();
+      });
+
+      it('should return error when element not found', async () => {
+        const result = await rpcHandlers.clickElementById('nonexistent');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not found');
+      });
+
+      it('should return error when element is disabled', async () => {
+        document.body.innerHTML = '<button data-devpilot-id="e123" disabled>Click me</button>';
+
+        const result = await rpcHandlers.clickElementById('e123');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('disabled');
+      });
+
+      it('should return error when element is not visible', async () => {
+        document.body.innerHTML = '<button data-devpilot-id="e123" style="display: none">Click me</button>';
+
+        const result = await rpcHandlers.clickElementById('e123');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not visible');
+      });
+
+      it('should return error for non-HTMLElement', async () => {
+        document.body.innerHTML = '<svg data-devpilot-id="e123"></svg>';
+
+        const result = await rpcHandlers.clickElementById('e123');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not clickable');
+      });
+    });
+
+    describe('inputTextById', () => {
+      it('should input text into input element', async () => {
+        document.body.innerHTML = '<input data-devpilot-id="e123">';
+        const input = document.querySelector('input')!;
+
+        const result = await rpcHandlers.inputTextById('e123', 'test value');
+
+        expect(result.success).toBe(true);
+        expect(input.value).toBe('test value');
+      });
+
+      it('should input text into textarea element', async () => {
+        document.body.innerHTML = '<textarea data-devpilot-id="e123"></textarea>';
+        const textarea = document.querySelector('textarea')!;
+
+        const result = await rpcHandlers.inputTextById('e123', 'test value');
+
+        expect(result.success).toBe(true);
+        expect(textarea.value).toBe('test value');
+      });
+
+      it('should select option by value in select element', async () => {
+        document.body.innerHTML = `
+          <select data-devpilot-id="e123">
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+          </select>
+        `;
+        const select = document.querySelector('select')!;
+
+        const result = await rpcHandlers.inputTextById('e123', '2');
+
+        expect(result.success).toBe(true);
+        expect(select.value).toBe('2');
+      });
+
+      it('should select option by display text in select element', async () => {
+        document.body.innerHTML = `
+          <select data-devpilot-id="e123">
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+          </select>
+        `;
+        const select = document.querySelector('select')!;
+
+        const result = await rpcHandlers.inputTextById('e123', 'Option 2');
+
+        expect(result.success).toBe(true);
+        expect(select.value).toBe('2');
+      });
+
+      it('should return error when option text not found in select', async () => {
+        document.body.innerHTML = `
+          <select data-devpilot-id="e123">
+            <option value="1">Option 1</option>
+          </select>
+        `;
+
+        const result = await rpcHandlers.inputTextById('e123', 'Nonexistent');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('No option found');
+      });
+
+      it('should return error when element not found', async () => {
+        const result = await rpcHandlers.inputTextById('nonexistent', 'test');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not found');
+      });
+
+      it('should return error for non-input element', async () => {
+        document.body.innerHTML = '<div data-devpilot-id="e123">Content</div>';
+
+        const result = await rpcHandlers.inputTextById('e123', 'test');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not an input');
+      });
+    });
+
+    describe('getElementInfoById', () => {
+      it('should return element info', async () => {
+        document.body.innerHTML = '<button data-devpilot-id="e123" id="submit" class="btn primary">Submit</button>';
+
+        const result = await rpcHandlers.getElementInfoById('e123');
+
+        expect(result.success).toBe(true);
+        expect(result.element).toBeDefined();
+        expect(result.element!.id).toBe('e123');
+        expect(result.element!.tag).toBe('button');
+        expect(result.element!.text).toBe('Submit');
+        expect(result.element!.attributes.id).toBe('submit');
+        expect(result.element!.attributes.class).toBe('btn primary');
+      });
+
+      it('should return error when element not found', async () => {
+        const result = await rpcHandlers.getElementInfoById('nonexistent');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not found');
+      });
+
+      it('should extract input value', async () => {
+        document.body.innerHTML = '<input data-devpilot-id="e123" value="test value">';
+        const input = document.querySelector('input')!;
+        input.value = 'test value';
+
+        const result = await rpcHandlers.getElementInfoById('e123');
+
+        expect(result.success).toBe(true);
+        expect(result.element!.text).toBe('test value');
       });
     });
   });

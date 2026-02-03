@@ -1,11 +1,13 @@
 import type { RpcHandlers } from 'unplugin-devpilot/client';
 import type {
   AccessibilityNode,
+  CompactSnapshotResult,
   ConsoleLogEntry,
   DomInspectorRpc,
+  ElementInfo,
 } from '../shared-types';
 import { uniqueId } from 'es-toolkit/compat';
-import { defineRpcHandlers } from 'unplugin-devpilot/client';
+import { defineRpcHandlers, getDevpilotClient } from 'unplugin-devpilot/client';
 
 // Store captured logs
 const capturedLogs: ConsoleLogEntry[] = [];
@@ -14,6 +16,184 @@ const maxLogBufferSize = 1000;
 // Helper function to generate stable UIDs using es-toolkit
 function generateUid(): string {
   return `node_${uniqueId()}`;
+}
+
+// Helper function to get current client ID from the devpilot client
+function getClientId(): string {
+  const client = getDevpilotClient();
+  const clientId = client?.getClientId();
+  return clientId || 'unknown';
+}
+
+// Helper function to bind unique ID to DOM element
+function bindElementId(element: Element): string {
+  // Check if element already has a devpilot ID
+  let id = element.getAttribute('data-devpilot-id');
+  if (id) {
+    return id;
+  }
+
+  // Generate new unique ID using es-toolkit uniqueId
+  id = `e${uniqueId()}`;
+  element.setAttribute('data-devpilot-id', id);
+
+  return id;
+}
+
+// Helper function to get visible text from element
+function getVisibleText(element: Element): string {
+  const text = element.textContent?.trim() || '';
+
+  // For form elements, also consider placeholder and value
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    if (element.value) {
+      return element.value;
+    }
+    if (element.placeholder) {
+      return element.placeholder;
+    }
+  }
+  else if (element instanceof HTMLSelectElement) {
+    if (element.value) {
+      return element.value;
+    }
+  }
+
+  return text;
+}
+
+// Important attributes for interaction (shared across functions)
+const IMPORTANT_ATTRS = ['id', 'type', 'href', 'placeholder', 'role', 'name', 'value', 'for'];
+
+// Helper function to get compact attributes
+function getCompactAttributes(element: Element): string[] {
+  const attrs: string[] = [];
+
+  for (const key of IMPORTANT_ATTRS) {
+    const value = element.getAttribute(key);
+    if (value) {
+      attrs.push(`${key}=${value}`);
+    }
+  }
+
+  // Class - only first 2 classes
+  const className = element.getAttribute('class');
+  if (className) {
+    const classes = className.split(/\s+/).filter(Boolean).slice(0, 2);
+    if (classes.length > 0) {
+      attrs.push(`class=${classes.join('.')}`);
+    }
+  }
+
+  return attrs;
+}
+
+// Check if element is important (should be included in snapshot)
+function isImportantElement(element: Element): boolean {
+  const tag = element.tagName.toLowerCase();
+
+  // Always include interactive elements
+  if (['button', 'input', 'select', 'textarea', 'a'].includes(tag)) {
+    return true;
+  }
+
+  // Include elements with visible text
+  if (getVisibleText(element)) {
+    return true;
+  }
+
+  // Include elements with important attributes
+  if (element.id || element.getAttribute('role') || element.getAttribute('data-devpilot-id')) {
+    return true;
+  }
+
+  return false;
+}
+
+// Build compact snapshot in agent-browser style
+function buildCompactSnapshot(element: Element, depth: number, maxDepth: number): string {
+  // Depth limit check - prevent infinite recursion
+  if (depth > maxDepth) {
+    return '';
+  }
+
+  const lines: string[] = [];
+  const indent = ' '.repeat(depth * 2);
+
+  if (!isImportantElement(element)) {
+    return '';
+  }
+
+  const id = bindElementId(element);
+  const tag = element.tagName.toLowerCase();
+  const text = getVisibleText(element);
+  const attrs = getCompactAttributes(element);
+
+  let line = `${indent}@${id} [${tag}]`;
+  if (text) {
+    // Escape double quotes in text to preserve snapshot format
+    const escapedText = text.replace(/"/g, '\\"');
+    line += ` "${escapedText}"`;
+  }
+  if (attrs.length > 0) {
+    line += ` [${attrs.join(' ')}]`;
+  }
+
+  lines.push(line);
+
+  // Recursively process children (limit depth and count)
+  const children = Array.from(element.children)
+    .filter(isImportantElement)
+    .slice(0, 20); // Limit children per node
+
+  for (const child of children) {
+    const childSnapshot = buildCompactSnapshot(child, depth + 1, maxDepth);
+    if (childSnapshot) {
+      lines.push(childSnapshot);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+// Get element info by ID
+function getElementInfoById(id: string): ElementInfo {
+  const element = document.querySelector(`[data-devpilot-id="${id}"]`);
+
+  if (!element) {
+    return {
+      success: false,
+      error: `Element with ID ${id} not found`,
+    };
+  }
+
+  const tag = element.tagName.toLowerCase();
+  const text = getVisibleText(element);
+  const attributes: Record<string, string> = {};
+
+  // Collect relevant attributes (using shared IMPORTANT_ATTRS + class)
+  for (const attr of IMPORTANT_ATTRS) {
+    const value = element.getAttribute(attr);
+    if (value) {
+      attributes[attr] = value;
+    }
+  }
+
+  // Also include class
+  const classValue = element.getAttribute('class');
+  if (classValue) {
+    attributes.class = classValue;
+  }
+
+  return {
+    success: true,
+    element: {
+      id,
+      tag,
+      text,
+      attributes,
+    },
+  };
 }
 
 // Helper function to get accessibility information from an element
@@ -254,6 +434,175 @@ function captureConsoleLogs() {
 captureConsoleLogs();
 
 export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
+  // Compact snapshot - agent-browser style format
+  getCompactSnapshot: async (maxDepth = 5) => {
+    try {
+      console.log('[devpilot-dom-inspector] getCompactSnapshot called');
+
+      const snapshot = buildCompactSnapshot(document.body, 0, maxDepth);
+
+      const result: CompactSnapshotResult = {
+        success: true,
+        clientId: getClientId(),
+        timestamp: Date.now(),
+        url: location.href,
+        title: document.title || '',
+        snapshot,
+      };
+
+      console.log('[devpilot-dom-inspector] getCompactSnapshot returning snapshot with length:', snapshot.length);
+      return result;
+    }
+    catch (error) {
+      console.error('[devpilot-dom-inspector] getCompactSnapshot error:', error);
+      return {
+        success: false,
+        clientId: getClientId(),
+        timestamp: Date.now(),
+        url: location.href,
+        title: document.title || '',
+        snapshot: '',
+        error: error instanceof Error
+          ? error.message
+          : String(error),
+      };
+    }
+  },
+
+  // Click element by ID
+  clickElementById: async (id: string) => {
+    try {
+      console.log('[devpilot-dom-inspector] clickElementById called with id:', id);
+
+      const element = document.querySelector(`[data-devpilot-id="${id}"]`);
+      if (!element) {
+        return {
+          success: false,
+          error: `Element with ID ${id} not found`,
+        };
+      }
+
+      if (element instanceof HTMLElement) {
+        // Check if element is disabled
+        if (element.disabled) {
+          return {
+            success: false,
+            error: `Element with ID ${id} is disabled`,
+          };
+        }
+
+        // Check if element is visible (has offsetParent)
+        if (element.offsetParent === null) {
+          return {
+            success: false,
+            error: `Element with ID ${id} is not visible`,
+          };
+        }
+
+        element.click();
+        console.log('[devpilot-dom-inspector] clickElementById success');
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: `Element with ID ${id} is not clickable (not an HTMLElement)`,
+      };
+    }
+    catch (error) {
+      console.error('[devpilot-dom-inspector] clickElementById error:', error);
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error),
+      };
+    }
+  },
+
+  // Input text by ID
+  inputTextById: async (id: string, text: string) => {
+    try {
+      console.log('[devpilot-dom-inspector] inputTextById called with id:', id, 'text:', text);
+
+      const element = document.querySelector(`[data-devpilot-id="${id}"]`);
+      if (!element) {
+        return {
+          success: false,
+          error: `Element with ID ${id} not found`,
+        };
+      }
+
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        element.value = text;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log('[devpilot-dom-inspector] inputTextById success');
+        return { success: true };
+      }
+
+      if (element instanceof HTMLSelectElement) {
+        // First try to match by value
+        element.value = text;
+
+        // If value doesn't match, try to find option by display text
+        if (element.value !== text) {
+          const matchingOption = Array.from(element.options).find(
+            option => option.textContent?.trim() === text,
+          );
+
+          if (matchingOption) {
+            element.value = matchingOption.value;
+          }
+          else {
+            return {
+              success: false,
+              error: `No option found with text "${text}" in select element`,
+            };
+          }
+        }
+
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log('[devpilot-dom-inspector] inputTextById success (select)');
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: `Element with ID ${id} is not an input, textarea, or select element`,
+      };
+    }
+    catch (error) {
+      console.error('[devpilot-dom-inspector] inputTextById error:', error);
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error),
+      };
+    }
+  },
+
+  // Get element info by ID
+  getElementInfoById: async (id: string) => {
+    try {
+      console.log('[devpilot-dom-inspector] getElementInfoById called with id:', id);
+
+      const result = getElementInfoById(id);
+      console.log('[devpilot-dom-inspector] getElementInfoById returning:', result);
+      return result;
+    }
+    catch (error) {
+      console.error('[devpilot-dom-inspector] getElementInfoById error:', error);
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error),
+      };
+    }
+  },
+
   querySelector: async (selector, maxDepth = 5) => {
     try {
       console.log('[devpilot-dom-inspector] querySelector called with:', selector);

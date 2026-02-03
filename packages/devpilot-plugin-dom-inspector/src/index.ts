@@ -55,6 +55,62 @@ function generateClientNotFoundErrorSuggestions(
   return suggestions;
 }
 
+// Helper function to handle client RPC calls with common error handling
+async function handleClientRpc<T>(
+  clientId: string | undefined,
+  rpcMethod: (client: NonNullable<ReturnType<typeof clientManager.getClient<DomInspectorRpc>>>) => Promise<T>,
+): Promise<{ content: Array<{ type: 'text', text: string }> }> {
+  if (!clientId) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          error: 'No client specified. Either provide clientId parameter or call within a task context.',
+          suggestion: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
+        }, null, 2),
+      }],
+    };
+  }
+
+  const client = clientManager.getClient<DomInspectorRpc>(clientId);
+  if (!client) {
+    const availableClients = clientManager.getAllClients();
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          error: `Client ${clientId} not found or disconnected`,
+          suggestions: generateClientNotFoundErrorSuggestions(clientId, availableClients),
+          availableClients,
+        }, null, 2),
+      }],
+    };
+  }
+
+  try {
+    const result = await rpcMethod(client);
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(result, null, 2),
+      }],
+    };
+  }
+  catch (error) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          error: 'RPC call failed',
+          details: error instanceof Error
+            ? error.message
+            : String(error),
+        }, null, 2),
+      }],
+    };
+  }
+}
+
 // Define plugin-specific RPC interface
 
 export default <DevpilotPlugin>{
@@ -80,67 +136,18 @@ export default <DevpilotPlugin>{
         },
         async (params) => {
           const { selector, clientId, maxDepth } = params;
-          const targetClientId = clientId;
-
-          if (!targetClientId) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'No client specified. Either provide clientId parameter or call within a task context.',
-                  suggestion: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
-                }, null, 2),
-              }],
-            };
-          }
-
-          const client = clientManager.getClient<DomInspectorRpc>(targetClientId);
-          if (!client) {
-            const availableClients = clientManager.getAllClients();
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: `Client ${targetClientId} not found or disconnected`,
-                  suggestions: generateClientNotFoundErrorSuggestions(targetClientId, availableClients),
-                  availableClients,
-                }, null, 2),
-              }],
-            };
-          }
-
-          try {
-            // Call the client's querySelector method via RPC
-            const result = await client.rpc.querySelector(selector, maxDepth);
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify(result, null, 2),
-              }],
-            };
-          }
-          catch (error) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'Failed to query selector',
-                  details: error instanceof Error
-                    ? error.message
-                    : String(error),
-                }, null, 2),
-              }],
-            };
-          }
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.querySelector(selector, maxDepth);
+          });
         },
       ),
 
-      // get_dom_tree - 获取DOM树（可访问性树）
+      // get_compact_snapshot - 获取紧凑DOM快照（agent-browser风格）
       defineMcpToolRegister(
-        'get_dom_tree',
+        'get_compact_snapshot',
         {
-          title: 'Get DOM Tree',
-          description: 'Get accessibility tree snapshot of the DOM',
+          title: 'Get Compact Snapshot',
+          description: 'Get a compact DOM snapshot in agent-browser format, optimized for token efficiency. Returns elements with unique IDs like @e123 [button] "Submit" [type=submit]',
           inputSchema: z.object({
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
@@ -148,58 +155,143 @@ export default <DevpilotPlugin>{
         },
         async (params) => {
           const { clientId, maxDepth } = params;
-          const targetClientId = clientId;
+          const result = await handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getCompactSnapshot(maxDepth);
+          });
 
-          if (!targetClientId) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'No client specified. Either provide clientId parameter or call within a task context.',
-                  suggestion: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
-                }, null, 2),
-              }],
-            };
+          // Check if the RPC call failed
+          const rpcResult = result.content[0].text;
+          if (rpcResult.includes('"error"')) {
+            return result;
           }
 
-          const client = clientManager.getClient<DomInspectorRpc>(targetClientId);
-          if (!client) {
-            const availableClients = clientManager.getAllClients();
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: `Client ${targetClientId} not found or disconnected`,
-                  suggestions: generateClientNotFoundErrorSuggestions(targetClientId, availableClients),
-                  availableClients,
-                }, null, 2),
-              }],
-            };
-          }
-
+          // Parse the result to add markdown formatting
+          let parsedResult;
           try {
-            // Call the client's getDOMTree method via RPC
-            const result = await client.rpc.getDOMTree(maxDepth);
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify(result, null, 2),
-              }],
-            };
+            parsedResult = JSON.parse(rpcResult);
           }
-          catch (error) {
+          catch (e) {
             return {
               content: [{
                 type: 'text' as const,
                 text: JSON.stringify({
-                  error: 'Failed to get DOM tree',
-                  details: error instanceof Error
-                    ? error.message
-                    : String(error),
+                  error: 'Failed to parse RPC result',
+                  details: e instanceof Error
+                    ? e.message
+                    : String(e),
+                  rawResult: rpcResult,
                 }, null, 2),
               }],
             };
           }
+
+          if (!parsedResult.success) {
+            return result;
+          }
+
+          const snapshotText = `# Compact DOM Snapshot
+
+**Client ID:** ${parsedResult.clientId}
+**URL:** ${parsedResult.url}
+**Title:** ${parsedResult.title}
+**Timestamp:** ${new Date(parsedResult.timestamp).toISOString()}
+
+## Snapshot
+
+\`\`\`
+${parsedResult.snapshot}
+\`\`\`
+
+## Usage
+- Use the @id format (e.g., @e123) to reference elements
+- Call click_element_by_id({ id: "e123" }) to click
+- Call input_text_by_id({ id: "e123", text: "value" }) to input text
+- Call get_element_info_by_id({ id: "e123" }) to get details
+`;
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: snapshotText,
+            }],
+          };
+        },
+      ),
+
+      // click_element_by_id - 通过ID点击元素
+      defineMcpToolRegister(
+        'click_element_by_id',
+        {
+          title: 'Click Element by ID',
+          description: 'Click an element by its snapshot ID (e.g., e123 from @e123 [button] "Submit")',
+          inputSchema: z.object({
+            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+          }),
+        },
+        async (params) => {
+          const { id, clientId } = params;
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.clickElementById(id);
+          });
+        },
+      ),
+
+      // input_text_by_id - 通过ID输入文本
+      defineMcpToolRegister(
+        'input_text_by_id',
+        {
+          title: 'Input Text by ID',
+          description: 'Input text into an element by its snapshot ID (e.g., e123 from @e123 [input] "placeholder")',
+          inputSchema: z.object({
+            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            text: z.string().describe('Text to input'),
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+          }),
+        },
+        async (params) => {
+          const { id, text, clientId } = params;
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.inputTextById(id, text);
+          });
+        },
+      ),
+
+      // get_element_info_by_id - 通过ID获取元素信息
+      defineMcpToolRegister(
+        'get_element_info_by_id',
+        {
+          title: 'Get Element Info by ID',
+          description: 'Get detailed information about an element by its snapshot ID (e.g., e123)',
+          inputSchema: z.object({
+            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+          }),
+        },
+        async (params) => {
+          const { id, clientId } = params;
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getElementInfoById(id);
+          });
+        },
+      ),
+
+      // get_dom_tree - 获取DOM树（可访问性树）- 保留旧方法
+      defineMcpToolRegister(
+        'get_dom_tree',
+        {
+          title: 'Get DOM Tree',
+          description: 'Get accessibility tree snapshot of the DOM (legacy method, prefer get_compact_snapshot for token efficiency)',
+          inputSchema: z.object({
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
+          }),
+        },
+        async (params) => {
+          const { clientId, maxDepth } = params;
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getDOMTree(maxDepth);
+          });
         },
       ),
 
@@ -217,59 +309,9 @@ export default <DevpilotPlugin>{
         },
         async (params) => {
           const { clientId, level, limit } = params;
-          const targetClientId = clientId;
-
-          if (!targetClientId) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'No client specified. Either provide clientId parameter or call within a task context.',
-                  suggestion: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
-                }, null, 2),
-              }],
-            };
-          }
-
-          const client = clientManager.getClient<DomInspectorRpc>(targetClientId);
-          if (!client) {
-            const availableClients = clientManager.getAllClients();
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: `Client ${targetClientId} not found or disconnected`,
-                  suggestions: generateClientNotFoundErrorSuggestions(targetClientId, availableClients),
-                  availableClients,
-                }, null, 2),
-              }],
-            };
-          }
-
-          try {
-            // Call the client's getLogs method via RPC
-            const result = await client.rpc.getLogs({ level, limit });
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify(result, null, 2),
-              }],
-            };
-          }
-          catch (error) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'Failed to get logs',
-                  details: error instanceof Error
-                    ? error.message
-                    : String(error),
-                  suggestion: 'Make sure the browser client is properly connected and logs are being captured.',
-                }, null, 2),
-              }],
-            };
-          }
+          return handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getLogs({ level, limit });
+          });
         },
       ),
     ];

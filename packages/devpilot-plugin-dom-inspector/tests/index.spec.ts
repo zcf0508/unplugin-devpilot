@@ -45,7 +45,7 @@ describe('mCP Tools - Node Side', () => {
     for (const name of ['query_selector', 'get_dom_tree', 'get_logs']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_1' } as any);
-      expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('Failed');
+      expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('RPC call failed');
     }
   });
 
