@@ -12,22 +12,38 @@ describe('mCP Tools - Node Side', () => {
         querySelector: vi.fn().mockResolvedValue({ success: true, matchedCount: 1, elements: [] }),
         getDOMTree: vi.fn().mockResolvedValue({ success: true, tree: { uid: 'root', role: 'document', name: null } }),
         getLogs: vi.fn().mockResolvedValue({ success: true, logs: [], total: 0, filtered: 0, level: 'all' }),
+        getLayout: vi.fn().mockResolvedValue({
+          success: true,
+          targetId: 'body',
+          targetRect: { x: 0, y: 0, width: 100, height: 100 },
+          layout: { level1: '@e1 [div]' },
+          depth: 1,
+          timestamp: Date.now(),
+        }),
       },
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
     const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
     const toolCalls = [
-      { tool: 'query_selector', args: { selector: '.test', clientId: 'c_1' }, mock: mockClient.rpc.querySelector },
-      { tool: 'get_dom_tree', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getDOMTree },
-      { tool: 'get_logs', args: { clientId: 'c_1', level: 'all' }, mock: mockClient.rpc.getLogs },
+      { tool: 'query_selector', args: { selector: '.test', clientId: 'c_1' }, mock: mockClient.rpc.querySelector, isJson: true },
+      { tool: 'get_dom_tree', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getDOMTree, isJson: true },
+      { tool: 'get_logs', args: { clientId: 'c_1', level: 'all' }, mock: mockClient.rpc.getLogs, isJson: true },
+      { tool: 'get_layout', args: { clientId: 'c_1', maxDepth: 15 }, mock: mockClient.rpc.getLayout, isJson: false },
     ];
 
-    for (const { tool, args, mock } of toolCalls) {
+    for (const { tool, args, mock, isJson } of toolCalls) {
       const toolDef = tools.find(t => t().name === tool);
       const result = await toolDef!().cb(args as any);
       expect(mock).toHaveBeenCalled();
-      expect(JSON.parse((result.content[0] as { text: string }).text).success).toBe(true);
+
+      if (isJson) {
+        expect(JSON.parse((result.content[0] as { text: string }).text).success).toBe(true);
+      }
+      else {
+        // get_layout returns markdown, check for success indicator
+        expect((result.content[0] as { text: string }).text).toContain('DOM Layout Analysis');
+      }
     }
   });
 
@@ -37,12 +53,13 @@ describe('mCP Tools - Node Side', () => {
         querySelector: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getDOMTree: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getLogs: vi.fn().mockRejectedValue(new Error('RPC failed')),
+        getLayout: vi.fn().mockRejectedValue(new Error('RPC failed')),
       },
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
     const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs']) {
+    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_1' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('RPC call failed');
@@ -54,7 +71,7 @@ describe('mCP Tools - Node Side', () => {
     vi.mocked(clientManager.getAllClients).mockReturnValue([]);
 
     const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs']) {
+    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_nonexistent' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('not found');
@@ -63,7 +80,7 @@ describe('mCP Tools - Node Side', () => {
 
   it('all tools should handle missing clientId', async () => {
     const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs']) {
+    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ selector: '.test' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('No client specified');

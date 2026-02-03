@@ -5,6 +5,7 @@ import type {
   ConsoleLogEntry,
   DomInspectorRpc,
   ElementInfo,
+  GetLayoutResult,
 } from '../shared-types';
 import { uniqueId } from 'es-toolkit/compat';
 import { defineRpcHandlers, getDevpilotClient } from 'unplugin-devpilot/client';
@@ -151,27 +152,7 @@ const INTERACTIVE_ROLES = new Set([
   'menu',
 ]);
 
-// Structural roles - elements that are purely for organizing content
-// Based on agent-browser's STRUCTURAL_ROLES
-const STRUCTURAL_ROLES = new Set([
-  'generic',
-  'group',
-  'list',
-  'table',
-  'row',
-  'rowgroup',
-  'grid',
-  'treegrid',
-  'menubar',
-  'toolbar',
-  'tablist',
-  'tree',
-  'directory',
-  'document',
-  'application',
-  'presentation',
-  'none',
-]);
+// Note: STRUCTURAL_ROLES removed as they were not used in the current implementation
 
 // Content roles - elements that provide content/structure with names
 const CONTENT_ROLES = new Set([
@@ -191,18 +172,27 @@ function getInteractiveState(element: Element): string[] {
   const states: string[] = [];
 
   if (element instanceof HTMLElement) {
-    // Check disabled state
-    if (element.disabled) {
-      states.push('disabled');
+    // Check disabled state - only for form elements
+    if (
+      element instanceof HTMLInputElement
+      || element instanceof HTMLTextAreaElement
+      || element instanceof HTMLSelectElement
+      || element instanceof HTMLButtonElement
+    ) {
+      if (element.disabled) {
+        states.push('disabled');
+      }
     }
 
-    // Check readonly state
+    // Check readonly state (only for input and textarea)
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
       if (element.readOnly) {
         states.push('readonly');
       }
+    }
 
-      // Check checked state for checkbox/radio
+    // Check checked state for checkbox/radio (only for input)
+    if (element instanceof HTMLInputElement) {
       if (element.type === 'checkbox' || element.type === 'radio') {
         if (element.checked) {
           states.push('checked');
@@ -284,6 +274,12 @@ function isImportantElement(element: Element): boolean {
   // Always include body element
   if (tag === 'body') {
     return true;
+  }
+
+  // Skip non-visual elements (script, style, link, meta)
+  const nonVisualTags = ['script', 'style', 'link', 'meta'];
+  if (nonVisualTags.includes(tag)) {
+    return false;
   }
 
   // Get the element's ARIA role (or infer from tag)
@@ -432,19 +428,296 @@ function inferRoleFromTag(tag: string): string {
   return roleMap[tag] || 'generic';
 }
 
+// Check if one rectangle fully covers another rectangle
+// Used by getLayout to determine visual coverage hierarchy
+function isRectCovering(coverRect: DOMRect, targetRect: DOMRect, tolerance = 10): boolean {
+  return (
+    coverRect.left - tolerance <= targetRect.left
+    && coverRect.right + tolerance >= targetRect.right
+    && coverRect.top - tolerance <= targetRect.top
+    && coverRect.bottom + tolerance >= targetRect.bottom
+  );
+}
+
+// Check if element is absolutely or fixed positioned
+function isAbsoluteOrFixed(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+  const style = window.getComputedStyle(element);
+  return style.position === 'absolute' || style.position === 'fixed';
+}
+
+// Check if multiple elements together cover the parent rectangle
+function elementsTogetherCoverParent(elements: Element[], parentRect: DOMRect): boolean {
+  if (elements.length === 0) { return false; }
+  if (elements.length === 1) { return isRectCovering(elements[0].getBoundingClientRect(), parentRect); }
+
+  // Calculate the union of all element rectangles
+  let minLeft = Infinity;
+  let minTop = Infinity;
+  let maxRight = -Infinity;
+  let maxBottom = -Infinity;
+
+  for (const el of elements) {
+    const rect = el.getBoundingClientRect();
+    minLeft = Math.min(minLeft, rect.left);
+    minTop = Math.min(minTop, rect.top);
+    maxRight = Math.max(maxRight, rect.right);
+    maxBottom = Math.max(maxBottom, rect.bottom);
+  }
+
+  // Check if the union covers the parent
+  const tolerance = 10;
+  return (
+    minLeft - tolerance <= parentRect.left
+    && maxRight + tolerance >= parentRect.right
+    && minTop - tolerance <= parentRect.top
+    && maxBottom + tolerance >= parentRect.bottom
+  );
+}
+
+// Calculate DOM depth of an element from body
+function getDomDepth(element: Element): number {
+  let depth = 0;
+  let current: Element | null = element;
+  while (current && current !== document.body) {
+    depth++;
+    current = current.parentElement;
+  }
+  return depth;
+}
+
+// Collect top-level positioned elements under a root element (recursively)
+// Only collects visible positioned elements that are not nested inside other positioned elements
+// Filters out hidden elements like scrollbars
+function collectPositionedElements(element: Element, results: Element[] = [], insidePositioned = false): Element[] {
+  for (const child of Array.from(element.children)) {
+    const isPositioned = isAbsoluteOrFixed(child);
+
+    if (isPositioned && !insidePositioned) {
+      // Only collect visible positioned elements that are not inside another positioned element
+      // Skip hidden elements (like scrollbars with 'hidden' class)
+      const isHidden = child.classList.contains('hidden')
+        || child.getAttribute('aria-hidden') === 'true';
+      if (isImportantElement(child) && !isHidden) {
+        results.push(child);
+        // Don't recurse into positioned elements - they form their own layer
+        continue;
+      }
+    }
+
+    // Continue recursively, passing the insidePositioned flag
+    collectPositionedElements(child, results, insidePositioned || isPositioned);
+  }
+  return results;
+}
+
+// Find boundary elements that together cover the parent
+// Returns the maximum DOM depth of these boundary elements
+// Boundary elements are:
+// - Multiple elements that together cover the parent (visual layer boundary)
+// - Or a single element that covers the parent but has no covering children
+function findBoundaryElementsDepth(element: Element, parentRect: DOMRect): number {
+  const boundaryElements = findBoundaryElements(element, parentRect);
+  if (boundaryElements.length === 0) {
+    return getDomDepth(element);
+  }
+  // Return the maximum depth among boundary elements
+  let maxDepth = getDomDepth(element);
+  for (const el of boundaryElements) {
+    maxDepth = Math.max(maxDepth, getDomDepth(el));
+  }
+  return maxDepth;
+}
+
+// Find boundary elements that together cover the parent
+// Returns the array of boundary elements (not just depth)
+function findBoundaryElements(element: Element, parentRect: DOMRect): Element[] {
+  // Find all non-positioned children that intersect with parent
+  const candidateChildren: Element[] = [];
+  for (const child of Array.from(element.children)) {
+    if (isAbsoluteOrFixed(child)) { continue; }
+
+    const childRect = child.getBoundingClientRect();
+    // Check if child intersects with parent
+    const intersects = !(
+      childRect.right < parentRect.left
+      || childRect.left > parentRect.right
+      || childRect.bottom < parentRect.top
+      || childRect.top > parentRect.bottom
+    );
+
+    if (intersects) {
+      candidateChildren.push(child);
+    }
+  }
+
+  // Check if any single child covers the parent
+  const coveringChildren: Element[] = [];
+  const nonCoveringChildren: Element[] = [];
+
+  for (const child of candidateChildren) {
+    const childRect = child.getBoundingClientRect();
+    if (isRectCovering(childRect, parentRect)) {
+      coveringChildren.push(child);
+    }
+    else {
+      nonCoveringChildren.push(child);
+    }
+  }
+
+  // If no single child covers parent, check if multiple together cover it
+  if (coveringChildren.length === 0 && nonCoveringChildren.length > 0) {
+    if (elementsTogetherCoverParent(nonCoveringChildren, parentRect)) {
+      // These non-covering children together form the visual boundary
+      return nonCoveringChildren;
+    }
+  }
+
+  // If we have covering children, recurse into them
+  if (coveringChildren.length > 0) {
+    const allBoundaryElements: Element[] = [];
+    for (const child of coveringChildren) {
+      const childRect = child.getBoundingClientRect();
+      const childBoundaries = findBoundaryElements(child, childRect);
+      if (childBoundaries.length > 0) {
+        allBoundaryElements.push(...childBoundaries);
+      }
+      else {
+        // This child covers parent but has no covering children, it's a boundary
+        allBoundaryElements.push(child);
+      }
+    }
+    return allBoundaryElements;
+  }
+
+  // No children cover the parent, return empty array (current element is the boundary)
+  return [];
+}
+
+// Build layout hierarchy based on visual coverage
+// Returns an object where each level contains a complete tree snapshot from body to that visual layer
+// Algorithm:
+// 1. Find the main covering element (the one that covers the viewport)
+// 2. Find boundary elements within the main covering element
+// 3. Build ONE snapshot for the main covering layer (from body to boundary elements)
+// 4. Find all positioned elements and build ONE snapshot for each
+function buildLayoutTree(
+  element: Element,
+  maxDepth: number,
+): { snapshots: Record<string, string>, depth: number } {
+  const levelSnapshots: Record<string, string> = {};
+  let currentLevel = 0;
+
+  const elementRect = element.getBoundingClientRect();
+
+  // Find all non-positioned children that intersect with the element
+  const candidateChildren: Element[] = [];
+  for (const child of Array.from(element.children)) {
+    if (isAbsoluteOrFixed(child)) { continue; }
+    const childRect = child.getBoundingClientRect();
+    // Check if child intersects with element
+    const intersects = !(
+      childRect.right < elementRect.left
+      || childRect.left > elementRect.right
+      || childRect.bottom < elementRect.top
+      || childRect.top > elementRect.bottom
+    );
+    if (intersects) {
+      candidateChildren.push(child);
+    }
+  }
+
+  // Separate covering children from non-covering children
+  const coveringChildren: Element[] = [];
+  const nonCoveringChildren: Element[] = [];
+
+  for (const child of candidateChildren) {
+    const childRect = child.getBoundingClientRect();
+    if (isRectCovering(childRect, elementRect)) {
+      coveringChildren.push(child);
+    }
+    else {
+      nonCoveringChildren.push(child);
+    }
+  }
+
+  // Determine the main covering element(s)
+  let mainCoveringElement: Element | null = null;
+  let boundaryElements: Element[] = [];
+
+  if (coveringChildren.length > 0) {
+    // Use the first covering child as main element
+    mainCoveringElement = coveringChildren[0];
+    const mainRect = mainCoveringElement.getBoundingClientRect();
+    boundaryElements = findBoundaryElements(mainCoveringElement, mainRect);
+    if (boundaryElements.length === 0) {
+      boundaryElements = [mainCoveringElement];
+    }
+  }
+  else if (nonCoveringChildren.length > 0 && elementsTogetherCoverParent(nonCoveringChildren, elementRect)) {
+    // Multiple children together cover the parent - they are the boundary elements
+    boundaryElements = nonCoveringChildren;
+  }
+
+  // Build level1: main content layer (body to boundary elements)
+  if (boundaryElements.length > 0 && currentLevel < maxDepth) {
+    const boundaryDepth = Math.max(...boundaryElements.map(el => getDomDepth(el)));
+    // Build snapshot with pruning - only include elements on path to boundary elements
+    const snapshot = buildCompactSnapshot(document.body, 0, boundaryDepth, boundaryElements);
+    if (snapshot) {
+      levelSnapshots.level1 = snapshot;
+      currentLevel++;
+    }
+  }
+
+  // Collect all positioned elements from the entire tree
+  const allPositioned: Element[] = [];
+  collectPositionedElements(document.body, allPositioned);
+
+  // Remove duplicates and sort by DOM depth
+  const uniquePositioned = [...new Set(allPositioned)];
+  uniquePositioned.sort((a, b) => getDomDepth(a) - getDomDepth(b));
+
+  // Build level2+: each positioned element is an independent visual layer
+  for (const positionedEl of uniquePositioned) {
+    if (currentLevel >= maxDepth) {
+      break;
+    }
+
+    const depth = getDomDepth(positionedEl);
+    // Build snapshot with pruning - only include elements on path to the positioned element
+    const snapshot = buildCompactSnapshot(document.body, 0, depth, [positionedEl]);
+    if (snapshot) {
+      const levelKey = `level${currentLevel + 1}`;
+      levelSnapshots[levelKey] = snapshot;
+      currentLevel++;
+    }
+  }
+
+  return { snapshots: levelSnapshots, depth: currentLevel };
+}
+
 // Build compact snapshot in agent-browser style
-function buildCompactSnapshot(element: Element, depth: number, maxDepth: number): string {
+// If targetElements is provided, only elements on the path to targetElements will be included (pruning)
+function buildCompactSnapshot(
+  element: Element,
+  depth: number,
+  maxDepth: number,
+  targetElements?: Element[],
+): string {
   // Depth limit check - prevent infinite recursion
   if (depth > maxDepth) {
     return '';
   }
 
-  const lines: string[] = [];
-  const indent = ' '.repeat(depth * 2);
-
   if (!isImportantElement(element)) {
     return '';
   }
+
+  const lines: string[] = [];
+  const indent = ' '.repeat(depth * 2);
 
   const id = bindElementId(element);
   const tag = element.tagName.toLowerCase();
@@ -463,13 +736,32 @@ function buildCompactSnapshot(element: Element, depth: number, maxDepth: number)
 
   lines.push(line);
 
+  // If this element is one of the target elements, stop here (don't expand its children)
+  // This prevents expanding the full subtree of boundary elements
+  if (targetElements && targetElements.length > 0 && targetElements.includes(element)) {
+    return lines.join('\n');
+  }
+
   // Recursively process children (limit depth and count)
-  const children = Array.from(element.children)
+  let children = Array.from(element.children)
     .filter(isImportantElement)
     .slice(0, 20); // Limit children per node
 
+  // If targetElements is provided, prune children that are not on the path to targets
+  if (targetElements && targetElements.length > 0) {
+    children = children.filter((child) => {
+      // Keep this child if:
+      // 1. It is one of the target elements
+      // 2. It contains one of the target elements (ancestor of target)
+      return targetElements.some(target =>
+        child === target
+        || child.contains(target),
+      );
+    });
+  }
+
   for (const child of children) {
-    const childSnapshot = buildCompactSnapshot(child, depth + 1, maxDepth);
+    const childSnapshot = buildCompactSnapshot(child, depth + 1, maxDepth, targetElements);
     if (childSnapshot) {
       lines.push(childSnapshot);
     }
@@ -805,8 +1097,14 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
       }
 
       if (element instanceof HTMLElement) {
-        // Check if element is disabled
-        if (element.disabled) {
+        // Check if element is disabled (only for form elements)
+        if (
+          (element instanceof HTMLInputElement
+            || element instanceof HTMLTextAreaElement
+            || element instanceof HTMLSelectElement
+            || element instanceof HTMLButtonElement)
+          && element.disabled
+        ) {
           return {
             success: false,
             error: `Element with ID ${id} is disabled`,
@@ -1039,10 +1337,87 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
       };
     }
   },
+
+  // Get layout hierarchy based on visual coverage
+  getLayout: async (options) => {
+    const { id, maxDepth = 15 } = options || {};
+
+    try {
+      console.log('[devpilot-dom-inspector] getLayout called with id:', id, 'maxDepth:', maxDepth);
+
+      // Find target element (or use body)
+      const target = id
+        ? document.querySelector(`[data-devpilot-id="${id}"]`)
+        : document.body;
+
+      if (!target) {
+        return {
+          success: false,
+          error: `Element with ID ${id} not found`,
+        } as GetLayoutResult;
+      }
+
+      // Get target element's bounding rectangle
+      const targetRect = target.getBoundingClientRect();
+
+      // Build layout tree starting from target element to capture its visual layers
+      const { snapshots, depth } = buildLayoutTree(target, maxDepth);
+
+      const result: GetLayoutResult = {
+        success: true,
+        targetId: id || 'body',
+        targetRect: {
+          x: targetRect.x,
+          y: targetRect.y,
+          width: targetRect.width,
+          height: targetRect.height,
+        },
+        layout: Object.keys(snapshots).length > 0
+          ? snapshots
+          : null,
+        depth,
+        timestamp: Date.now(),
+      };
+
+      console.log('[devpilot-dom-inspector] getLayout returning with depth:', depth, 'levels:', Object.keys(snapshots).length);
+      return result;
+    }
+    catch (error) {
+      console.error('[devpilot-dom-inspector] getLayout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error),
+        targetId: id || 'body',
+        targetRect: { x: 0, y: 0, width: 0, height: 0 },
+        layout: null,
+        depth: 0,
+        timestamp: Date.now(),
+      } as GetLayoutResult;
+    }
+  },
 });
 
 // Export types for module augmentation
 export type { RpcHandlers };
 
 // Export helper functions for testing
-export { buildAccessibilityTree, getAccessibilityInfo, getAccessibleName, getElementOwnText, getInteractiveState, getVisualState, isImportantElement };
+export {
+  buildAccessibilityTree,
+  getAccessibilityInfo,
+  getAccessibleName,
+  getElementOwnText,
+  getInteractiveState,
+  getVisualState,
+  isImportantElement,
+};
+
+// Export internal functions for testing
+export {
+  elementsTogetherCoverParent,
+  findBoundaryElements,
+  findBoundaryElementsDepth,
+  getDomDepth,
+  isRectCovering,
+};

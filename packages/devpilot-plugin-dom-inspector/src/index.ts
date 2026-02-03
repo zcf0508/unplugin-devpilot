@@ -314,6 +314,97 @@ ${parsedResult.snapshot}
           });
         },
       ),
+
+      // get_layout - 获取布局结构（自动判断视觉覆盖层级）
+      defineMcpToolRegister(
+        'get_layout',
+        {
+          title: 'Get Layout',
+          description: 'Get visual layout hierarchy of DOM elements. Automatically detects which child elements fully cover the target element. Returns multiple levels of snapshots showing visual coverage relationships. Use this to quickly understand page structure before calling get_compact_snapshot.',
+          inputSchema: z.object({
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            id: z.string().optional().describe('Element ID to analyze (defaults to body)'),
+            maxDepth: z.number().optional().default(15).describe('Maximum depth to traverse'),
+          }),
+        },
+        async (params) => {
+          const { clientId, id, maxDepth } = params;
+          const result = await handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getLayout({ id, maxDepth });
+          });
+
+          // Parse and format the result
+          const rpcResult = result.content[0].text;
+          if (rpcResult.includes('"error"')) {
+            return result;
+          }
+
+          let parsedResult;
+          try {
+            parsedResult = JSON.parse(rpcResult);
+          }
+          catch (e) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  error: 'Failed to parse RPC result',
+                  details: e instanceof Error
+                    ? e.message
+                    : String(e),
+                  rawResult: rpcResult,
+                }, null, 2),
+              }],
+            };
+          }
+
+          if (!parsedResult.success) {
+            return result;
+          }
+
+          // Build formatted output
+          let layoutText = '# DOM Layout Analysis\n\n';
+          layoutText += `**Target ID:** ${parsedResult.targetId}\n`;
+          layoutText += `**Target Rect:** x=${parsedResult.targetRect.x.toFixed(1)}, y=${parsedResult.targetRect.y.toFixed(1)}, w=${parsedResult.targetRect.width.toFixed(1)}, h=${parsedResult.targetRect.height.toFixed(1)}\n`;
+          layoutText += `**Depth:** ${parsedResult.depth}\n`;
+          layoutText += `**Timestamp:** ${new Date(parsedResult.timestamp).toISOString()}\n\n`;
+
+          if (parsedResult.layout) {
+            const levels = Object.keys(parsedResult.layout).sort();
+            layoutText += '## Layout Levels\n\n';
+            for (const level of levels) {
+              layoutText += `### ${level}\n`;
+              layoutText += `\`\`\`\n${parsedResult.layout[level]}\n\`\`\`\n\n`;
+            }
+
+            layoutText += '## Usage Guide\n\n';
+            layoutText += '1. **Analyze the layout structure** - Each level shows elements that visually cover the target\n';
+            layoutText += '2. **Identify the layer you need** - e.g., level1 for main content, level2 for modal\n';
+            layoutText += '3. **Get detailed snapshot** - Call get_compact_snapshot(maxDepth) for that layer\n';
+            layoutText += '4. **Execute actions** - Use click_element_by_id() or input_text_by_id()\n\n';
+            layoutText += '## Example Workflow\n\n';
+            layoutText += '```typescript\n';
+            layoutText += '// 1. Get layout overview\n';
+            layoutText += 'const layout = await get_layout({ maxDepth: 15 });\n';
+            layoutText += '// LLM sees: page has 3 visual layers\n\n';
+            layoutText += '// 2. Get detailed snapshot for specific layer\n';
+            layoutText += 'const snapshot = await get_compact_snapshot({ maxDepth: 5 });\n\n';
+            layoutText += '// 3. Execute action\n';
+            layoutText += 'await click_element_by_id({ id: "e14" });\n';
+            layoutText += '```\n';
+          }
+          else {
+            layoutText += '## Result\n\nNo layout hierarchy found. The target element has no child elements.\n';
+          }
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: layoutText,
+            }],
+          };
+        },
+      ),
     ];
 
     return tools;

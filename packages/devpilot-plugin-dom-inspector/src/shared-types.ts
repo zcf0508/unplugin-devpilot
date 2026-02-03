@@ -69,12 +69,30 @@ export interface GetLogsResult {
   error?: string
 }
 
+export interface GetLayoutResult {
+  success: boolean
+  targetId: string
+  targetRect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  layout: Record<string, string> | null // level -> snapshot string
+  depth: number
+  error?: string
+  timestamp?: number
+}
+
 export interface DomInspectorRpc {
   // Compact snapshot (agent-browser style)
   getCompactSnapshot: (maxDepth?: number) => Promise<CompactSnapshotResult>
   clickElementById: (id: string) => Promise<ElementActionResult>
   inputTextById: (id: string, text: string) => Promise<ElementActionResult>
   getElementInfoById: (id: string) => Promise<ElementInfo>
+
+  // Layout analysis - automatically detects visual coverage hierarchy
+  getLayout: (options?: { id?: string, maxDepth?: number }) => Promise<GetLayoutResult>
 
   // Legacy methods
   querySelector: (selector: string, maxDepth?: number) => Promise<QuerySelectorResult>
