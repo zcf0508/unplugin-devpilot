@@ -40,9 +40,64 @@ function bindElementId(element: Element): string {
   return id;
 }
 
+// Helper function to get accessible name from aria attributes
+function getAccessibleName(element: Element): string {
+  // Try aria-label first
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) {
+    return ariaLabel.trim();
+  }
+
+  // Try aria-labelledby (can contain multiple IDs separated by whitespace)
+  const labelledBy = element.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const ids = labelledBy.split(/\s+/).filter(Boolean);
+    const labels: string[] = [];
+
+    for (const id of ids) {
+      const labelElement = document.getElementById(id);
+      if (labelElement) {
+        const label = labelElement.textContent?.trim();
+        if (label) {
+          labels.push(label);
+        }
+      }
+    }
+
+    if (labels.length > 0) {
+      return labels.join(' ');
+    }
+  }
+
+  return '';
+}
+
+// Helper function to get element's own text (excluding children's text)
+function getElementOwnText(element: Element): string {
+  // For elements with child elements, we need to extract only the text nodes
+  // that belong to this element (not to children)
+  const textNodes: string[] = [];
+  for (const child of Array.from(element.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent;
+      if (text) {
+        textNodes.push(text);
+      }
+    }
+  }
+
+  // Join all text nodes and trim the final result to preserve original spacing
+  // while removing leading/trailing whitespace
+  return textNodes.join('').trim();
+}
+
 // Helper function to get visible text from element
 function getVisibleText(element: Element): string {
-  const text = element.textContent?.trim() || '';
+  // First try accessible name from aria attributes
+  const accessibleName = getAccessibleName(element);
+  if (accessibleName) {
+    return accessibleName;
+  }
 
   // For form elements, also consider placeholder and value
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
@@ -58,12 +113,134 @@ function getVisibleText(element: Element): string {
       return element.value;
     }
   }
+  else if (element instanceof HTMLOptionElement) {
+    // For option elements, use text content
+    const text = element.textContent?.trim();
+    if (text) {
+      return text;
+    }
+  }
 
-  return text;
+  // For other elements, get only the element's own text (not children's text)
+  return getElementOwnText(element);
 }
 
 // Important attributes for interaction (shared across functions)
 const IMPORTANT_ATTRS = ['id', 'type', 'href', 'placeholder', 'role', 'name', 'value', 'for'];
+
+// Interactive roles - elements that users can directly interact with
+// Based on agent-browser's INTERACTIVE_ROLES
+const INTERACTIVE_ROLES = new Set([
+  'button',
+  'link',
+  'textbox',
+  'checkbox',
+  'radio',
+  'combobox',
+  'listbox',
+  'menuitem',
+  'menuitemcheckbox',
+  'menuitemradio',
+  'option',
+  'searchbox',
+  'slider',
+  'spinbutton',
+  'switch',
+  'tab',
+  'treeitem',
+  'menu',
+]);
+
+// Structural roles - elements that are purely for organizing content
+// Based on agent-browser's STRUCTURAL_ROLES
+const STRUCTURAL_ROLES = new Set([
+  'generic',
+  'group',
+  'list',
+  'table',
+  'row',
+  'rowgroup',
+  'grid',
+  'treegrid',
+  'menubar',
+  'toolbar',
+  'tablist',
+  'tree',
+  'directory',
+  'document',
+  'application',
+  'presentation',
+  'none',
+]);
+
+// Content roles - elements that provide content/structure with names
+const CONTENT_ROLES = new Set([
+  'heading',
+  'paragraph',
+  'article',
+  'section',
+  'note',
+  'status',
+  'alert',
+  'log',
+  'marquee',
+]);
+
+// Helper function to get interactive state (disabled, readonly, checked, selected)
+function getInteractiveState(element: Element): string[] {
+  const states: string[] = [];
+
+  if (element instanceof HTMLElement) {
+    // Check disabled state
+    if (element.disabled) {
+      states.push('disabled');
+    }
+
+    // Check readonly state
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      if (element.readOnly) {
+        states.push('readonly');
+      }
+
+      // Check checked state for checkbox/radio
+      if (element.type === 'checkbox' || element.type === 'radio') {
+        if (element.checked) {
+          states.push('checked');
+        }
+      }
+    }
+
+    // Check selected state for option
+    if (element instanceof HTMLOptionElement) {
+      if (element.selected) {
+        states.push('selected');
+      }
+    }
+  }
+
+  return states;
+}
+
+// Helper function to get visual state (hidden, zero-size)
+function getVisualState(element: Element): string[] {
+  const states: string[] = [];
+
+  if (element instanceof HTMLElement) {
+    // Check if element is hidden via CSS
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      states.push('hidden');
+    }
+
+    // Check if element has zero size
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      states.push('zero-size');
+    }
+  }
+
+  return states;
+}
 
 // Helper function to get compact attributes
 function getCompactAttributes(element: Element): string[] {
@@ -85,6 +262,18 @@ function getCompactAttributes(element: Element): string[] {
     }
   }
 
+  // Add interactive state
+  const interactiveStates = getInteractiveState(element);
+  if (interactiveStates.length > 0) {
+    attrs.push(...interactiveStates);
+  }
+
+  // Add visual state
+  const visualStates = getVisualState(element);
+  if (visualStates.length > 0) {
+    attrs.push(...visualStates);
+  }
+
   return attrs;
 }
 
@@ -92,22 +281,155 @@ function getCompactAttributes(element: Element): string[] {
 function isImportantElement(element: Element): boolean {
   const tag = element.tagName.toLowerCase();
 
-  // Always include interactive elements
-  if (['button', 'input', 'select', 'textarea', 'a'].includes(tag)) {
+  // Always include body element
+  if (tag === 'body') {
     return true;
   }
 
-  // Include elements with visible text
-  if (getVisibleText(element)) {
+  // Get the element's ARIA role (or infer from tag)
+  const role = element.getAttribute('role') || inferRoleFromTag(tag);
+
+  // Always include interactive elements (even if hidden, they might become visible)
+  if (INTERACTIVE_ROLES.has(role)) {
+    return true;
+  }
+
+  // Fast path: Skip hidden elements using lightweight checks
+  // Note: We avoid getComputedStyle() for performance reasons
+  if (element instanceof HTMLElement) {
+    // Check HTML5 hidden attribute (fastest)
+    if (element.hidden) {
+      return false;
+    }
+
+    // Check inline styles (fast)
+    const style = element.style;
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false;
+    }
+
+    // Note: We intentionally DO NOT check offsetParent here because:
+    // 1. It can be null for many valid cases (position:fixed, detached elements, etc.)
+    // 2. It causes false positives where visible elements are filtered out
+    // 3. The inline style checks above are sufficient for most cases
+  }
+
+  // Include elements with visible text and content roles
+  const text = getVisibleText(element);
+  if (text && CONTENT_ROLES.has(role)) {
     return true;
   }
 
   // Include elements with important attributes
-  if (element.id || element.getAttribute('role') || element.getAttribute('data-devpilot-id')) {
+  if (element.id || element.getAttribute('data-devpilot-id')) {
+    return true;
+  }
+
+  // Include elements with visible text (for elements without explicit role)
+  if (text) {
+    return true;
+  }
+
+  // Include elements that have important child elements
+  // This ensures we don't skip container elements that wrap important content
+  for (const child of Array.from(element.children)) {
+    const childRole = child.getAttribute('role') || inferRoleFromTag(child.tagName.toLowerCase());
+    if (INTERACTIVE_ROLES.has(childRole)) {
+      return true;
+    }
+  }
+
+  // Include semantic HTML elements (they often have implicit ARIA roles)
+  const semanticTags = ['section', 'header', 'footer', 'nav', 'main', 'aside', 'article', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+  if (semanticTags.includes(tag)) {
+    return true;
+  }
+
+  // Include elements with class that suggest interactive/semantic importance
+  const className = element.getAttribute('class');
+  if (className) {
+    // Check for common UI patterns
+    const uiPatterns = [
+      /btn/,
+      /button/,
+      /link/,
+      /menu/,
+      /item/,
+      /card/,
+      /input/,
+      /select/,
+      /checkbox/,
+      /radio/,
+      /header/,
+      /footer/,
+      /nav/,
+      /sidebar/,
+      /content/,
+      /main/,
+      /title/,
+      /label/,
+      /text/,
+      /config/,
+      /provider/,
+      /app/,
+      /container/,
+      /wrapper/,
+      /box/,
+      /panel/,
+      /section/,
+    ];
+
+    if (uiPatterns.some(pattern => pattern.test(className))) {
+      return true;
+    }
+  }
+
+  // Include elements that have children (potential containers)
+  // This ensures we don't skip wrapper elements
+  if (element.children.length > 0) {
+    return true;
+  }
+
+  // Include elements with any class (as a fallback to not miss important elements)
+  // This is more permissive but ensures we don't miss Vue-generated components
+  if (className) {
     return true;
   }
 
   return false;
+}
+
+// Infer ARIA role from HTML tag
+function inferRoleFromTag(tag: string): string {
+  const roleMap: Record<string, string> = {
+    a: 'link',
+    button: 'button',
+    input: 'textbox',
+    select: 'combobox',
+    textarea: 'textbox',
+    h1: 'heading',
+    h2: 'heading',
+    h3: 'heading',
+    h4: 'heading',
+    h5: 'heading',
+    h6: 'heading',
+    ul: 'list',
+    ol: 'list',
+    li: 'listitem',
+    nav: 'navigation',
+    main: 'main',
+    header: 'banner',
+    footer: 'contentinfo',
+    section: 'region',
+    article: 'article',
+    aside: 'complementary',
+    p: 'paragraph',
+    table: 'table',
+    tr: 'row',
+    td: 'cell',
+  };
+
+  return roleMap[tag] || 'generic';
 }
 
 // Build compact snapshot in agent-browser style
@@ -723,4 +1045,4 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
 export type { RpcHandlers };
 
 // Export helper functions for testing
-export { buildAccessibilityTree, getAccessibilityInfo };
+export { buildAccessibilityTree, getAccessibilityInfo, getAccessibleName, getElementOwnText, getInteractiveState, getVisualState, isImportantElement };
