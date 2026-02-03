@@ -129,7 +129,6 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   });
 
 export default unpluginDevpilot;
-export type { RpcHandlers } from './client/types';
 export { clientManager } from './core/client-manager';
 export type { DevpilotPlugin, Options } from './core/options';
 export type { DevpilotPluginContext } from './core/plugin';
