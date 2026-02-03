@@ -51,6 +51,7 @@ describe('mCP Tools - Node Side', () => {
 
   it('all tools should handle client not found', async () => {
     vi.mocked(clientManager.getClient).mockReturnValue(undefined);
+    vi.mocked(clientManager.getAllClients).mockReturnValue([]);
 
     const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
     for (const name of ['query_selector', 'get_dom_tree', 'get_logs']) {
