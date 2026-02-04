@@ -18,7 +18,10 @@ function formatLayoutForLLM(
 
   if (Object.keys(snapshots).length > 0) {
     const levels = Object.keys(snapshots).sort();
-    layoutText += '## Layout Levels\n\n';
+    layoutText += '## Visual Layout Levels\n\n';
+    layoutText += '**IMPORTANT:** Each level represents a **visual layer** in the page, NOT a DOM depth level.\n';
+    layoutText += '- **level1**: The base layer - the element hierarchy from the target up to the first element that visually covers it\n';
+    layoutText += '- **level2+**: Independent visual layers like modals, dropdowns, tooltips (positioned elements with `absolute`/`fixed`)\n\n';
     for (const level of levels) {
       layoutText += `### ${level}\n`;
       layoutText += `\`\`\`\n${snapshots[level]}\n\`\`\`\n\n`;
@@ -45,18 +48,20 @@ function formatLayoutForLLM(
     layoutText += '  - Visibility: invisible, transparent, display:none\n\n';
 
     layoutText += '## Usage Guide\n\n';
-    layoutText += '1. **Analyze the layout structure** - Each level shows elements that visually cover the target\n';
-    layoutText += '2. **Identify the layer you need** - e.g., level1 for main content, level2 for modal\n';
-    layoutText += '3. **Get detailed snapshot** - Call get_compact_snapshot(maxDepth) for that layer\n';
-    layoutText += '4. **Execute actions** - Use click_element_by_id() or input_text_by_id()\n\n';
+    layoutText += '1. **Analyze the visual layers** - Each level shows a different visual layer covering the target\n';
+    layoutText += '2. **Identify the layer you need** - e.g., level1 for base layer, level2 for modal overlay\n';
+    layoutText += '3. **Execute actions** - Use click_element_by_id() or input_text_by_id() with element @id\n\n';
     layoutText += '## Example Workflow\n\n';
     layoutText += '```typescript\n';
-    layoutText += '// 1. Get layout overview\n';
-    layoutText += 'const layout = await get_layout({ maxDepth: 15 });\n';
-    layoutText += '// LLM sees: page has 3 visual layers\n\n';
-    layoutText += '// 2. Get detailed snapshot for specific layer\n';
-    layoutText += 'const snapshot = await get_compact_snapshot({ maxDepth: 5 });\n\n';
-    layoutText += '// 3. Execute action\n';
+    layoutText += '// 1. Get layout overview (shows visual layers, not DOM depth)\n';
+    layoutText += 'const layout = await get_layout({ id: "e10", maxDepth: 15 });\n';
+    layoutText += '// Result: 3 visual layers covering element @e10\n';
+    layoutText += '// - level1: element hierarchy from @e10 up to its visual boundary\n';
+    layoutText += '// - level2: modal dialog overlay\n';
+    layoutText += '// - level3: dropdown menu\n\n';
+    layoutText += '// 2. Analyze the snapshot for the layer you need\n';
+    layoutText += '// (e.g., level2 shows the modal structure with element IDs)\n\n';
+    layoutText += '// 3. Execute action on specific element\n';
     layoutText += 'await click_element_by_id({ id: "e14" });\n';
     layoutText += '```\n';
   }
