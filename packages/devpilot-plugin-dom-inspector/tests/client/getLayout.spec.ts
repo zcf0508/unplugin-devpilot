@@ -523,4 +523,133 @@ describe('getLayout', () => {
     expect(result.layout!.level1).not.toContain('@e5');
     expect(result.layout!.level1).not.toContain('Deep Content');
   });
+
+  it('should detect interactive elements and include in formatted layout', async () => {
+    // Structure with various interactive elements
+    // Use flex layout to ensure elements together cover the parent
+    document.body.innerHTML = `
+        <div data-devpilot-id="e1" style="width: 100vw; height: 100vh; display: flex; flex-direction: column;">
+          <div style="flex: 1; display: flex;">
+            <button data-devpilot-id="e2" style="flex: 1;">Click Me</button>
+            <input data-devpilot-id="e3" type="text" placeholder="Enter text" style="flex: 1;">
+            <a data-devpilot-id="e4" href="#" style="flex: 1;">Link</a>
+          </div>
+          <div data-devpilot-id="e5" style="position: absolute; top: 0; left: 0; width: 100px; height: 100px;">
+            <button data-devpilot-id="e6">Modal Button</button>
+          </div>
+        </div>
+      `;
+
+    const result = await getLayout({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.formattedLayout).toBeDefined();
+
+    // Should contain Interactive Elements section
+    expect(result.formattedLayout).toContain('## Interactive Elements');
+    expect(result.formattedLayout).toContain('💡 **Interactive elements detected in this layout:**');
+
+    // Should detect clickable elements
+    expect(result.formattedLayout).toContain('**Clickable elements (buttons, links):**');
+    expect(result.formattedLayout).toContain('@e2');
+    expect(result.formattedLayout).toContain('Click Me');
+    expect(result.formattedLayout).toContain('@e4');
+    expect(result.formattedLayout).toContain('Link');
+
+    // Should detect inputable elements
+    expect(result.formattedLayout).toContain('**Inputable elements (text fields, search):**');
+    expect(result.formattedLayout).toContain('@e3');
+    expect(result.formattedLayout).toContain('Enter text');
+  });
+
+  it('should include recommended next actions in formatted layout', async () => {
+    document.body.innerHTML = `
+        <div data-devpilot-id="e1" style="width: 100vw; height: 100vh; display: flex; flex-direction: column;">
+          <div style="flex: 1; display: flex;">
+            <button data-devpilot-id="e2" style="flex: 1;">Submit</button>
+            <input data-devpilot-id="e3" type="text" placeholder="Search" style="flex: 1;">
+            <a data-devpilot-id="e4" href="#" style="flex: 1;">Link</a>
+          </div>
+        </div>
+      `;
+
+    const result = await getLayout({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.formattedLayout).toBeDefined();
+
+    // Should contain Recommended Next Actions section
+    expect(result.formattedLayout).toContain('## Recommended Next Actions');
+
+    // Should have priority 1 (base layer actions)
+    expect(result.formattedLayout).toContain('**Priority 1 - Direct actions in the base layer:**');
+    expect(result.formattedLayout).toContain('Click "@e2" (Submit)');
+    expect(result.formattedLayout).toContain('click_element_by_id({ id: "e2" })');
+    expect(result.formattedLayout).toContain('Click "@e4" (Link)');
+
+    // Should have priority 2 (input operations)
+    expect(result.formattedLayout).toContain('**Priority 2 - Input operations:**');
+    expect(result.formattedLayout).toContain('Input to "@e3" (Search)');
+    expect(result.formattedLayout).toContain('input_text_by_id({ id: "e3", text: "your_value" })');
+
+    // Should have deep dive suggestion
+    expect(result.formattedLayout).toContain('**Deep dive suggestion:**');
+    expect(result.formattedLayout).toContain('get_compact_snapshot({ startNodeId: "e123" })');
+  });
+
+  it('should NOT include interactive elements section when no interactive elements found', async () => {
+    // Structure with only non-interactive elements
+    document.body.innerHTML = `
+        <div data-devpilot-id="e1" style="width: 100vw; height: 100vh;">
+          <div data-devpilot-id="e2">Static Content</div>
+          <span data-devpilot-id="e3">Text</span>
+        </div>
+      `;
+
+    const result = await getLayout({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.formattedLayout).toBeDefined();
+
+    // Should NOT contain Interactive Elements section
+    expect(result.formattedLayout).not.toContain('## Interactive Elements');
+    expect(result.formattedLayout).not.toContain('## Recommended Next Actions');
+  });
+
+  it('should detect different interaction types correctly', async () => {
+    document.body.innerHTML = `
+        <div data-devpilot-id="e1" style="width: 100vw; height: 100vh; display: flex; flex-direction: column;">
+          <div style="flex: 1; display: flex; flex-wrap: wrap;">
+            <button data-devpilot-id="e2" style="flex: 1;">Button</button>
+            <a data-devpilot-id="e3" style="flex: 1;">Link</a>
+            <input data-devpilot-id="e4" type="text" style="flex: 1;">
+            <input data-devpilot-id="e5" type="search" style="flex: 1;">
+            <input data-devpilot-id="e6" type="checkbox" style="flex: 1;">
+            <input data-devpilot-id="e7" type="radio" style="flex: 1;">
+            <select data-devpilot-id="e8" style="flex: 1;"></select>
+          </div>
+        </div>
+      `;
+
+    const result = await getLayout({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.formattedLayout).toBeDefined();
+
+    // Verify clickable elements (button, link)
+    expect(result.formattedLayout).toContain('**Clickable elements (buttons, links):**');
+    expect(result.formattedLayout).toContain('@e2');
+    expect(result.formattedLayout).toContain('@e3');
+
+    // Verify inputable elements (text, search)
+    expect(result.formattedLayout).toContain('**Inputable elements (text fields, search):**');
+    expect(result.formattedLayout).toContain('@e4');
+    expect(result.formattedLayout).toContain('@e5');
+
+    // Verify selectable elements (checkbox, radio, select)
+    expect(result.formattedLayout).toContain('**Selectable elements (checkboxes, radios, dropdowns):**');
+    expect(result.formattedLayout).toContain('@e6');
+    expect(result.formattedLayout).toContain('@e7');
+    expect(result.formattedLayout).toContain('@e8');
+  });
 });

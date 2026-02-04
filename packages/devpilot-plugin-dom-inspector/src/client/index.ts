@@ -12,8 +12,8 @@ import { querySelector } from './querySelector';
 
 export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   // Compact snapshot - agent-browser style format
-  getCompactSnapshot: async (maxDepth?: number) => {
-    return omit(await getCompactSnapshot(maxDepth), 'snapshot');
+  getCompactSnapshot: async (options?: { maxDepth?: number, startNodeId?: string }) => {
+    return omit(await getCompactSnapshot(options), 'snapshot');
   },
 
   // Click element by ID

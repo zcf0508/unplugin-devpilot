@@ -98,7 +98,7 @@ export interface GetLayoutResult {
 
 export interface DomInspectorRpc {
   // Compact snapshot (agent-browser style)
-  getCompactSnapshot: (maxDepth?: number) => Promise<Omit<CompactSnapshotResult, 'snapshot'>>
+  getCompactSnapshot: (options?: { maxDepth?: number, startNodeId?: string }) => Promise<Omit<CompactSnapshotResult, 'snapshot'>>
   clickElementById: (id: string) => Promise<ElementActionResult>
   inputTextById: (id: string, text: string) => Promise<ElementActionResult>
   getElementInfoById: (id: string) => Promise<ElementInfo>

@@ -169,12 +169,13 @@ export default <DevpilotPlugin>{
           inputSchema: z.object({
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
+            startNodeId: z.string().optional().describe('Element ID to start snapshot from (e.g., "e123"). If provided, snapshot will be limited to this element and its children'),
           }),
         },
         async (params) => {
-          const { clientId, maxDepth } = params;
+          const { clientId, maxDepth, startNodeId } = params;
           const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.getCompactSnapshot(maxDepth);
+            return await client.rpc.getCompactSnapshot({ maxDepth, startNodeId });
           });
 
           // Handle error case

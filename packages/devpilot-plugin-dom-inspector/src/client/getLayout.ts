@@ -1,5 +1,52 @@
 import type { GetLayoutResult } from '../shared-types';
-import { buildCompactSnapshot, isImportantElement } from './utils';
+import { buildCompactSnapshot, INTERACTIVE_ROLES, isImportantElement } from './utils';
+
+// Analyze snapshot text to extract interactive elements with their IDs and roles
+function analyzeInteractiveElements(snapshot: string): Array<{
+  id: string
+  role: string
+  text: string
+  interactionType: string
+}> {
+  const interactiveElements: Array<{ id: string, role: string, text: string, interactionType: string }> = [];
+
+  // Match lines like: "@e123 [button] <button> "Click Me" [class=btn] {size:80x32}"
+  // Also matches lines without text: "@e123 [input] <checkbox> [type=checkbox] {size:16x443}"
+  const lineRegex = /@(\w+)\s+\[(\w+)\]\s+(?:<(\w+)>)?\s*(?:"(.*?)"\s*)?.*?/g;
+  let match;
+
+  while ((match = lineRegex.exec(snapshot)) !== null) {
+    const [, id, tag, role, text] = match;
+    const elementRole = role || tag;
+
+    if (INTERACTIVE_ROLES.has(elementRole)) {
+      let interactionType = 'unknown';
+
+      // Determine interaction type based on role
+      if (elementRole === 'button' || elementRole === 'link' || elementRole === 'menuitem') {
+        interactionType = 'clickable';
+      }
+      else if (elementRole === 'textbox' || elementRole === 'searchbox') {
+        interactionType = 'inputable';
+      }
+      else if (elementRole === 'checkbox' || elementRole === 'radio' || elementRole === 'switch') {
+        interactionType = 'selectable';
+      }
+      else if (elementRole === 'combobox' || elementRole === 'listbox') {
+        interactionType = 'selectable';
+      }
+
+      interactiveElements.push({
+        id,
+        role: elementRole,
+        text: text || '',
+        interactionType,
+      });
+    }
+  }
+
+  return interactiveElements;
+}
 
 // Format layout with LLM-friendly explanation
 // Combines server-side structure with client-side format details
@@ -47,6 +94,54 @@ function formatLayoutForLLM(
     layoutText += '  - Positioning: fixed, absolute, sticky\n';
     layoutText += '  - Visibility: invisible, transparent, display:none\n\n';
 
+    // Analyze interactive elements from all levels
+    const allInteractiveElements: Array<{
+      id: string
+      role: string
+      text: string
+      interactionType: string
+      level: string
+    }> = [];
+    for (const level of levels) {
+      const interactiveInLevel = analyzeInteractiveElements(snapshots[level]);
+      interactiveInLevel.forEach(el => allInteractiveElements.push({ ...el, level }));
+    }
+
+    // Add interactive elements section if any found
+    if (allInteractiveElements.length > 0) {
+      layoutText += '## Interactive Elements\n\n';
+      layoutText += '💡 **Interactive elements detected in this layout:**\n\n';
+
+      // Group by interaction type
+      const clickable = allInteractiveElements.filter(el => el.interactionType === 'clickable');
+      const inputable = allInteractiveElements.filter(el => el.interactionType === 'inputable');
+      const selectable = allInteractiveElements.filter(el => el.interactionType === 'selectable');
+
+      if (clickable.length > 0) {
+        layoutText += '**Clickable elements (buttons, links):**\n';
+        clickable.forEach((el) => {
+          layoutText += `- @${el.id} [${el.role}] "${el.text}" (in ${el.level})\n`;
+        });
+        layoutText += '\n';
+      }
+
+      if (inputable.length > 0) {
+        layoutText += '**Inputable elements (text fields, search):**\n';
+        inputable.forEach((el) => {
+          layoutText += `- @${el.id} [${el.role}] "${el.text}" (in ${el.level})\n`;
+        });
+        layoutText += '\n';
+      }
+
+      if (selectable.length > 0) {
+        layoutText += '**Selectable elements (checkboxes, radios, dropdowns):**\n';
+        selectable.forEach((el) => {
+          layoutText += `- @${el.id} [${el.role}] "${el.text}" (in ${el.level})\n`;
+        });
+        layoutText += '\n';
+      }
+    }
+
     layoutText += '## Usage Guide\n\n';
     layoutText += '1. **Analyze the visual layers** - Each level shows a different visual layer covering the target\n';
     layoutText += '2. **Identify the layer you need** - e.g., level1 for base layer, level2 for modal overlay\n';
@@ -64,6 +159,52 @@ function formatLayoutForLLM(
     layoutText += '// 3. Execute action on specific element\n';
     layoutText += 'await click_element_by_id({ id: "e14" });\n';
     layoutText += '```\n';
+
+    // Add recommended next actions if interactive elements found
+    if (allInteractiveElements.length > 0) {
+      layoutText += '\n## Recommended Next Actions\n\n';
+      layoutText += 'Based on the interactive elements detected, here are suggested next steps:\n\n';
+
+      // Priority 1: Clickable elements in the base layer (level1)
+      const clickableInLevel1 = allInteractiveElements.filter(el => el.interactionType === 'clickable' && el.level === 'level1');
+      if (clickableInLevel1.length > 0) {
+        layoutText += '**Priority 1 - Direct actions in the base layer:**\n';
+        clickableInLevel1.slice(0, 3).forEach((el) => {
+          layoutText += `- Click "@${el.id}" (${el.text || el.role})\n`;
+          layoutText += `  → Use: \`click_element_by_id({ id: "${el.id}" })\`\n\n`;
+        });
+      }
+
+      // Priority 2: Input elements
+      const inputElements = allInteractiveElements.filter(el => el.interactionType === 'inputable');
+      if (inputElements.length > 0) {
+        layoutText += '**Priority 2 - Input operations:**\n';
+        inputElements.slice(0, 2).forEach((el) => {
+          layoutText += `- Input to "@${el.id}" (${el.text || el.role})\n`;
+          layoutText += `  → Use: \`input_text_by_id({ id: "${el.id}", text: "your_value" })\`\n\n`;
+        });
+      }
+
+      // Priority 3: Elements in overlays (level2+)
+      const overlayElements = allInteractiveElements.filter(el => el.level !== 'level1');
+      if (overlayElements.length > 0) {
+        layoutText += '**Priority 3 - Actions in overlays (modals/dropdowns):**\n';
+        overlayElements.slice(0, 2).forEach((el) => {
+          layoutText += `- ${el.interactionType === 'clickable'
+            ? 'Click'
+            : el.interactionType === 'inputable'
+              ? 'Input to'
+              : 'Select'} "@${el.id}" (${el.text || el.role}) in ${el.level}\n`;
+          layoutText += `  → Use: \`click_element_by_id({ id: "${el.id}" })\` or other action\n\n`;
+        });
+      }
+
+      // Suggestion for deeper inspection
+      layoutText += '**Deep dive suggestion:**\n';
+      layoutText += '- If you need to explore a specific section (e.g., sidebar, modal content), use:\n';
+      layoutText += '  → `get_compact_snapshot({ startNodeId: "e123" })` where "e123" is the section container\n';
+      layoutText += '- This focuses the snapshot on just that section, reducing noise\n\n';
+    }
   }
   else {
     layoutText += '## Result\n\nNo layout hierarchy found. The target element has no child elements.\n';
