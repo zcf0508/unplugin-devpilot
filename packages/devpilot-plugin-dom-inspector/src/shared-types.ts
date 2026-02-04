@@ -79,6 +79,7 @@ export interface GetLayoutResult {
     height: number
   }
   layout: Record<string, string> | null // level -> snapshot string
+  formattedLayout?: string | null // LLM-friendly formatted layout with all levels
   depth: number
   error?: string
   timestamp?: number
@@ -92,7 +93,7 @@ export interface DomInspectorRpc {
   getElementInfoById: (id: string) => Promise<ElementInfo>
 
   // Layout analysis - automatically detects visual coverage hierarchy
-  getLayout: (options?: { id?: string, maxDepth?: number }) => Promise<GetLayoutResult>
+  getLayout: (options?: { id?: string, maxDepth?: number }) => Promise<Omit<GetLayoutResult, 'layout'>>
 
   // Legacy methods
   querySelector: (selector: string, maxDepth?: number) => Promise<QuerySelectorResult>

@@ -1,6 +1,72 @@
 import type { GetLayoutResult } from '../shared-types';
 import { buildCompactSnapshot, isImportantElement } from './utils';
 
+// Format layout with LLM-friendly explanation
+// Combines server-side structure with client-side format details
+function formatLayoutForLLM(
+  snapshots: Record<string, string>,
+  targetId: string,
+  targetRect: { x: number, y: number, width: number, height: number },
+  depth: number,
+  timestamp: number,
+): string {
+  let layoutText = '# DOM Layout Analysis\n\n';
+  layoutText += `**Target ID:** ${targetId}\n`;
+  layoutText += `**Target Rect:** x=${targetRect.x.toFixed(1)}, y=${targetRect.y.toFixed(1)}, w=${targetRect.width.toFixed(1)}, h=${targetRect.height.toFixed(1)}\n`;
+  layoutText += `**Depth:** ${depth}\n`;
+  layoutText += `**Timestamp:** ${new Date(timestamp).toISOString()}\n\n`;
+
+  if (Object.keys(snapshots).length > 0) {
+    const levels = Object.keys(snapshots).sort();
+    layoutText += '## Layout Levels\n\n';
+    for (const level of levels) {
+      layoutText += `### ${level}\n`;
+      layoutText += `\`\`\`\n${snapshots[level]}\n\`\`\`\n\n`;
+    }
+
+    layoutText += '## Format Guide\n\n';
+    layoutText += 'Each line represents a DOM element with the following structure:\n';
+    layoutText += '`@id [tag] <role> "text" [attributes] {visual}`\n\n';
+    layoutText += 'Where:\n';
+    layoutText += '- `@id`: Unique element identifier (e.g., @e1, @e2) - use this for targeted operations\n';
+    layoutText += '- `[tag]`: HTML tag name (e.g., [div], [button], [input])\n';
+    layoutText += '- `<role>`: ARIA role or semantic role (e.g., <button>, <link>, <heading>) - shown only if meaningful\n';
+    layoutText += '- `"text"`: Visible text content or accessible name - what users see or screen readers announce\n';
+    layoutText += '- `[attributes]`: Key attributes and states:\n';
+    layoutText += '  - Element properties: id, type, href, placeholder, name, value, for\n';
+    layoutText += '  - Interactive states: disabled, readonly, checked, selected\n';
+    layoutText += '  - Visual states: hidden, zero-size\n';
+    layoutText += '  - Class names (first 2 classes shown)\n';
+    layoutText += '- `{visual}``: Visual context (position, size, visibility):\n';
+    layoutText += '  - size:WxH - element dimensions in pixels\n';
+    layoutText += '  - pos:X,Y - position relative to viewport top-left\n';
+    layoutText += '  - z:N - z-index value\n';
+    layoutText += '  - Positioning: fixed, absolute, sticky\n';
+    layoutText += '  - Visibility: invisible, transparent, display:none\n\n';
+
+    layoutText += '## Usage Guide\n\n';
+    layoutText += '1. **Analyze the layout structure** - Each level shows elements that visually cover the target\n';
+    layoutText += '2. **Identify the layer you need** - e.g., level1 for main content, level2 for modal\n';
+    layoutText += '3. **Get detailed snapshot** - Call get_compact_snapshot(maxDepth) for that layer\n';
+    layoutText += '4. **Execute actions** - Use click_element_by_id() or input_text_by_id()\n\n';
+    layoutText += '## Example Workflow\n\n';
+    layoutText += '```typescript\n';
+    layoutText += '// 1. Get layout overview\n';
+    layoutText += 'const layout = await get_layout({ maxDepth: 15 });\n';
+    layoutText += '// LLM sees: page has 3 visual layers\n\n';
+    layoutText += '// 2. Get detailed snapshot for specific layer\n';
+    layoutText += 'const snapshot = await get_compact_snapshot({ maxDepth: 5 });\n\n';
+    layoutText += '// 3. Execute action\n';
+    layoutText += 'await click_element_by_id({ id: "e14" });\n';
+    layoutText += '```\n';
+  }
+  else {
+    layoutText += '## Result\n\nNo layout hierarchy found. The target element has no child elements.\n';
+  }
+
+  return layoutText;
+}
+
 // Calculate DOM depth of an element from body
 function getDomDepth(element: Element): number {
   let depth = 0;
@@ -158,7 +224,7 @@ function collectPositionedElements(element: Element, results: Element[] = [], in
 // 2. Find boundary elements within the main covering element
 // 3. Build ONE snapshot for the main covering layer (from body to boundary elements)
 // 4. Find all positioned elements and build ONE snapshot for each
-function buildLayoutTree(
+export function buildLayoutTree(
   element: Element,
   maxDepth: number,
 ): { snapshots: Record<string, string>, depth: number } {
@@ -280,6 +346,19 @@ export async function getLayout(
     // Build layout tree starting from target element to capture its visual layers
     const { snapshots, depth } = buildLayoutTree(target, maxDepth);
 
+    const timestamp = Date.now();
+
+    // Format snapshots with LLM-friendly explanation
+    const formattedLayout = Object.keys(snapshots).length > 0
+      ? formatLayoutForLLM(
+        snapshots,
+        id || 'body',
+        { x: targetRect.x, y: targetRect.y, width: targetRect.width, height: targetRect.height },
+        depth,
+        timestamp,
+      )
+      : null;
+
     const result: GetLayoutResult = {
       success: true,
       targetId: id || 'body',
@@ -292,8 +371,9 @@ export async function getLayout(
       layout: Object.keys(snapshots).length > 0
         ? snapshots
         : null,
+      formattedLayout,
       depth,
-      timestamp: Date.now(),
+      timestamp,
     };
 
     console.log('[devpilot-dom-inspector] getLayout returning with depth:', depth, 'levels:', Object.keys(snapshots).length);

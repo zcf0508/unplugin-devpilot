@@ -1,4 +1,5 @@
-import type { DomInspectorRpc } from '../shared-types';
+import type { DomInspectorRpc, GetLayoutResult } from '../shared-types';
+import { omit } from 'es-toolkit/compat';
 import { defineRpcHandlers } from 'unplugin-devpilot/client';
 import { clickElementById } from './clickElementById';
 import { getCompactSnapshot } from './getCompactSnapshot';
@@ -29,5 +30,9 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   getLogs,
 
   // Get layout hierarchy based on visual coverage
-  getLayout,
+  getLayout: async (
+    options?: { id?: string, maxDepth?: number },
+  ): Promise<Omit<GetLayoutResult, 'layout'>> => {
+    return omit(await getLayout(options), 'layout');
+  },
 });
