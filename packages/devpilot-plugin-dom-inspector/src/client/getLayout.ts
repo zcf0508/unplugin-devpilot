@@ -13,9 +13,9 @@ function analyzeInteractiveElements(snapshot: string): Array<{
   // Match lines like: "@e123 [button] <button> "Click Me" [class=btn] {size:80x32}"
   // Also matches lines without text: "@e123 [input] <checkbox> [type=checkbox] {size:16x443}"
   const lineRegex = /@(\w+)\s+\[(\w+)\]\s+(?:<(\w+)>)?\s*(?:"(.*?)"\s*)?.*?/g;
-  let match;
+  let match = lineRegex.exec(snapshot);
 
-  while ((match = lineRegex.exec(snapshot)) !== null) {
+  while (match !== null) {
     const [, id, tag, role, text] = match;
     const elementRole = role || tag;
 
@@ -43,6 +43,8 @@ function analyzeInteractiveElements(snapshot: string): Array<{
         interactionType,
       });
     }
+
+    match = lineRegex.exec(snapshot);
   }
 
   return interactiveElements;
