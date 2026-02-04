@@ -80,6 +80,17 @@ export default {
 
 </details>
 
+### 客户端导入
+
+在你的项目入口文件中添加以下导入来启用 devpilot 客户端：
+
+```ts
+// main.ts 或 main.js (入口文件)
+import 'virtual:devpilot-client';
+```
+
+这个导入会激活到开发服务器的 WebSocket 连接，并在客户端初始化所有已注册的插件。
+
 ## 包介绍
 
 ### [unplugin-devpilot](./packages/unplugin-devpilot)

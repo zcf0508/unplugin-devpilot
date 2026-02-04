@@ -54,6 +54,17 @@ export default {
 
 <br></details>
 
+## Client Import
+
+Add this import to your project entry point to enable the devpilot client:
+
+```ts
+// main.ts or main.js (entry point)
+import 'virtual:devpilot-client';
+```
+
+This import activates the WebSocket connection to the development server and initializes all registered plugins on the client side.
+
 ## License
 
 [MIT](./LICENSE) License © 2025-PRESENT [Huali](https://github.com/zcf0508)
