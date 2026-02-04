@@ -11,11 +11,14 @@ function getClientId(): string {
 
 // Format snapshot with LLM-friendly explanation
 // Similar to getLayout's formatLayoutForLLM - handles all formatting on client side
-function formatSnapshotForLLM(snapshot: string, url: string, title: string): string {
+function formatSnapshotForLLM(snapshot: string, url: string, title: string, startNodeId?: string): string {
   let formatted = '# DOM Structure Snapshot\n\n';
   formatted += '## Page Context\n';
   formatted += `- **URL:** ${url}\n`;
   formatted += `- **Title:** ${title}\n`;
+  if (startNodeId) {
+    formatted += `- **Start Node:** @${startNodeId} (snapshot starts from this element)\n`;
+  }
   formatted += `- **Timestamp:** ${new Date().toISOString()}\n\n`;
 
   formatted += '## Format Guide\n';
@@ -50,21 +53,56 @@ function formatSnapshotForLLM(snapshot: string, url: string, title: string): str
   formatted += '- Visual context helps understand layout and positioning\n';
   formatted += '- Hidden or zero-size elements are marked but still tracked\n\n';
 
+  if (startNodeId) {
+    formatted += '## Starting Node Context\n';
+    formatted += `This snapshot was generated starting from element @${startNodeId}. `;
+    formatted += 'This is useful for focusing on a specific section of the page (e.g., sidebar, modal, dropdown).\n';
+    formatted += 'To get a full page snapshot, call `get_compact_snapshot()` without the `startNodeId` parameter.\n\n';
+  }
+
   formatted += '## Interaction Commands\n';
   formatted += '- Use the @id format (e.g., @e123) to reference elements\n';
   formatted += '- Call `click_element_by_id({ id: "e123" })` to click\n';
   formatted += '- Call `input_text_by_id({ id: "e123", text: "value" })` to input text\n';
   formatted += '- Call `get_element_info_by_id({ id: "e123" })` to get details\n';
+  formatted += '- Call `get_compact_snapshot({ startNodeId: "e456" })` to get a snapshot of a specific section\n';
 
   return formatted;
 }
 
-export async function getCompactSnapshot(maxDepth = 5): Promise<CompactSnapshotResult> {
-  try {
-    console.log('[devpilot-dom-inspector] getCompactSnapshot called');
+export async function getCompactSnapshot(options?: {
+  maxDepth?: number
+  startNodeId?: string
+}): Promise<CompactSnapshotResult> {
+  const maxDepth = options?.maxDepth ?? 5;
+  const startNodeId = options?.startNodeId;
 
-    const rawSnapshot = buildCompactSnapshot(document.body, 0, maxDepth);
-    const formattedSnapshot = formatSnapshotForLLM(rawSnapshot, location.href, document.title || '');
+  try {
+    console.log('[devpilot-dom-inspector] getCompactSnapshot called with options:', options);
+
+    // Determine start element
+    let startElement: Element | null = null;
+    if (startNodeId) {
+      startElement = document.querySelector(`[data-devpilot-id="${startNodeId}"]`);
+      if (!startElement) {
+        return {
+          success: false,
+          clientId: getClientId(),
+          timestamp: Date.now(),
+          url: location.href,
+          title: document.title || '',
+          snapshot: '',
+          formattedSnapshot: null,
+          error: `Element with ID ${startNodeId} not found`,
+        };
+      }
+    }
+    else {
+      startElement = document.body;
+    }
+
+    const rawSnapshot = buildCompactSnapshot(startElement, 0, maxDepth);
+    const formattedSnapshot = formatSnapshotForLLM(rawSnapshot, location.href, document.title || '', startNodeId);
 
     const result: CompactSnapshotResult = {
       success: true,

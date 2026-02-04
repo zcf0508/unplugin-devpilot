@@ -4,7 +4,7 @@ import { uniqueId } from 'es-toolkit/compat';
 export const IMPORTANT_ATTRS = ['id', 'type', 'href', 'placeholder', 'role', 'name', 'value', 'for'] as const;
 
 // Infer ARIA role from HTML tag
-function inferRoleFromTag(tag: string): string {
+function inferRoleFromTag(tag: string, element?: Element): string {
   const roleMap: Record<string, string> = {
     a: 'link',
     button: 'button',
@@ -33,12 +33,37 @@ function inferRoleFromTag(tag: string): string {
     td: 'cell',
   };
 
+  // Special handling for input elements based on type attribute
+  if (tag === 'input' && element instanceof HTMLInputElement) {
+    const type = element.type;
+    if (type === 'checkbox') {
+      return 'checkbox';
+    }
+    if (type === 'radio') {
+      return 'radio';
+    }
+    if (type === 'search') {
+      return 'searchbox';
+    }
+    if (type === 'button' || type === 'submit' || type === 'reset') {
+      return 'button';
+    }
+    if (type === 'range') {
+      return 'slider';
+    }
+    if (type === 'number') {
+      return 'spinbutton';
+    }
+    // Default to textbox for text, email, url, tel, password, etc.
+    return 'textbox';
+  }
+
   return roleMap[tag] || 'generic';
 }
 
 // Interactive roles - elements that users can directly interact with
 // Based on agent-browser's INTERACTIVE_ROLES
-const INTERACTIVE_ROLES = new Set([
+export const INTERACTIVE_ROLES: Set<string> = new Set([
   'button',
   'link',
   'textbox',
@@ -60,7 +85,7 @@ const INTERACTIVE_ROLES = new Set([
 ]);
 
 // Content roles - elements that provide content/structure with names
-const CONTENT_ROLES = new Set([
+const CONTENT_ROLES = new Set<string>([
   'heading',
   'paragraph',
   'article',
@@ -371,7 +396,7 @@ function getAriaRole(element: Element): string {
   if (role) {
     return role;
   }
-  return inferRoleFromTag(element.tagName.toLowerCase());
+  return inferRoleFromTag(element.tagName.toLowerCase(), element);
 }
 
 // Helper function to get visual context (position, size, visibility)

@@ -20,7 +20,7 @@ describe('getCompactSnapshot', () => {
             <input type="text" placeholder="Enter text">
           </div>
         `;
-    const result = await getCompactSnapshot(5);
+    const result = await getCompactSnapshot({ maxDepth: 5 });
 
     expect(result.success).toBe(true);
     expect(result.clientId).toBe('test_client_id');
@@ -41,7 +41,7 @@ describe('getCompactSnapshot', () => {
             </div>
           </div>
         `;
-    const result = await getCompactSnapshot(1);
+    const result = await getCompactSnapshot({ maxDepth: 1 });
 
     expect(result.success).toBe(true);
     // Should not include deeply nested elements
@@ -52,9 +52,111 @@ describe('getCompactSnapshot', () => {
     // Test with empty body - should still work
     document.body.innerHTML = '';
 
-    const result = await getCompactSnapshot(5);
+    const result = await getCompactSnapshot({ maxDepth: 5 });
 
     expect(result.success).toBe(true);
     expect(result.snapshot).toBeDefined();
+  });
+
+  it('should return snapshot starting from specified startNodeId', async () => {
+    document.body.innerHTML = `
+      <div class="page">
+        <div class="header" data-devpilot-id="header">
+          <h1>Title</h1>
+        </div>
+        <div class="sidebar" data-devpilot-id="sidebar">
+          <button id="sidebar-btn">Sidebar Button</button>
+          <a href="#">Link</a>
+        </div>
+        <div class="main">
+          <button id="main-btn">Main Button</button>
+        </div>
+      </div>
+    `;
+
+    // Get snapshot starting from sidebar
+    const result = await getCompactSnapshot({
+      maxDepth: 5,
+      startNodeId: 'sidebar',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.snapshot).toBeDefined();
+    // Should contain sidebar elements
+    expect(result.snapshot).toContain('Sidebar Button');
+    expect(result.snapshot).toContain('Link');
+    // Should NOT contain main button (outside sidebar)
+    expect(result.snapshot).not.toContain('Main Button');
+    // Should NOT contain header elements (outside sidebar)
+    expect(result.snapshot).not.toContain('Title');
+  });
+
+  it('should return error when startNodeId does not exist', async () => {
+    document.body.innerHTML = `
+      <div class="container">
+        <button id="submit-btn">Submit</button>
+      </div>
+    `;
+
+    const result = await getCompactSnapshot({
+      maxDepth: 5,
+      startNodeId: 'nonexistent',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Element with ID nonexistent not found');
+    expect(result.snapshot).toBe('');
+  });
+
+  it('should handle nested elements within startNodeId', async () => {
+    document.body.innerHTML = `
+      <div class="page">
+        <div class="modal" data-devpilot-id="modal">
+          <div class="modal-header">
+            <h2>Modal Title</h2>
+          </div>
+          <div class="modal-body">
+            <input type="text" placeholder="Enter value">
+            <button id="modal-btn">Confirm</button>
+          </div>
+          <div class="modal-footer">
+            <button id="cancel-btn">Cancel</button>
+          </div>
+        </div>
+        <div class="outside">Outside content</div>
+      </div>
+    `;
+
+    const result = await getCompactSnapshot({
+      maxDepth: 10,
+      startNodeId: 'modal',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.snapshot).toBeDefined();
+    // Should contain all modal content
+    expect(result.snapshot).toContain('Modal Title');
+    expect(result.snapshot).toContain('Enter value');
+    expect(result.snapshot).toContain('Confirm');
+    expect(result.snapshot).toContain('Cancel');
+    // Should NOT contain outside content
+    expect(result.snapshot).not.toContain('Outside content');
+  });
+
+  it('should include startNodeId info in formatted snapshot', async () => {
+    document.body.innerHTML = `
+      <div class="container" data-devpilot-id="container">
+        <button>Click me</button>
+      </div>
+    `;
+
+    const result = await getCompactSnapshot({
+      startNodeId: 'container',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.formattedSnapshot).toBeDefined();
+    expect(result.formattedSnapshot).toContain('**Start Node:** @container');
+    expect(result.formattedSnapshot).toContain('Starting Node Context');
   });
 });
