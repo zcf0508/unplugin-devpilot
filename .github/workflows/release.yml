@@ -32,8 +32,10 @@ jobs:
       - name: Install Dependencies
         run: pnpm i
 
-      - name: PNPM build
-        run: pnpm run build
-
-      - name: Publish to NPM
+      - name: Publish unplugin-devpilot to NPM
         run: pnpm publish --access public --no-git-checks
+        working-directory: ./packages/unplugin-devpilot
+
+      - name: Publish devpilot-plugin-dom-inspector to NPM
+        run: pnpm publish --access public --no-git-checks
+        working-directory: ./packages/devpilot-plugin-dom-inspector
