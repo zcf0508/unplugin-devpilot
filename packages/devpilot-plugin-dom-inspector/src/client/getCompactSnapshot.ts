@@ -1,6 +1,7 @@
 import type { CompactSnapshotResult } from '../shared-types';
 import { getDevpilotClient } from 'unplugin-devpilot/client';
 import { buildCompactSnapshot } from './utils';
+import { generateSelectorNotFoundError, resolveElementBySelector } from './utils/resolveSelector';
 
 // Helper function to get current client ID from the devpilot client
 function getClientId(): string {
@@ -83,7 +84,7 @@ export async function getCompactSnapshot(options?: {
     // Determine start element
     let startElement: Element | null = null;
     if (startNodeId) {
-      startElement = document.querySelector(`[data-devpilot-id="${startNodeId}"]`);
+      startElement = resolveElementBySelector(startNodeId);
       if (!startElement) {
         return {
           success: false,
@@ -93,7 +94,7 @@ export async function getCompactSnapshot(options?: {
           title: document.title || '',
           snapshot: '',
           formattedSnapshot: null,
-          error: `Element with ID ${startNodeId} not found`,
+          error: generateSelectorNotFoundError(startNodeId),
         };
       }
     }

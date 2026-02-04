@@ -1,14 +1,15 @@
 import type { ElementActionResult } from '../shared-types';
+import { generateSelectorNotFoundError, resolveElementBySelector } from './utils/resolveSelector';
 
 export async function inputTextById(id: string, text: string): Promise<ElementActionResult> {
   try {
-    console.log('[devpilot-dom-inspector] inputTextById called with id:', id, 'text:', text);
+    console.log('[devpilot-dom-inspector] inputTextById called with id/selector:', id, 'text:', text);
 
-    const element = document.querySelector(`[data-devpilot-id="${id}"]`);
+    const element = resolveElementBySelector(id);
     if (!element) {
       return {
         success: false,
-        error: `Element with ID ${id} not found`,
+        error: generateSelectorNotFoundError(id),
       };
     }
 

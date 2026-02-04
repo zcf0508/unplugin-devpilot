@@ -155,3 +155,4 @@ export function buildAccessibilityTree(
 }
 
 export * from './buildCompactSnapshot';
+export * from './resolveSelector';

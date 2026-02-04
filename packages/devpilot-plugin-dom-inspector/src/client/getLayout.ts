@@ -1,5 +1,6 @@
 import type { GetLayoutResult } from '../shared-types';
 import { buildCompactSnapshot, INTERACTIVE_ROLES, isImportantElement } from './utils';
+import { generateSelectorNotFoundError, resolveElementBySelector } from './utils/resolveSelector';
 
 // Analyze snapshot text to extract interactive elements with their IDs and roles
 function analyzeInteractiveElements(snapshot: string): Array<{
@@ -478,13 +479,13 @@ export async function getLayout(
 
     // Find target element (or use body)
     const target = id
-      ? document.querySelector(`[data-devpilot-id="${id}"]`)
+      ? resolveElementBySelector(id)
       : document.body;
 
     if (!target) {
       return {
         success: false,
-        error: `Element with ID ${id} not found`,
+        error: generateSelectorNotFoundError(id || 'body'),
       } as GetLayoutResult;
     }
 

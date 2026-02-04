@@ -144,9 +144,9 @@ export default <DevpilotPlugin>{
         'query_selector',
         {
           title: 'Query Selector',
-          description: 'Query DOM elements using CSS selector with accessibility tree information',
+          description: 'Query DOM elements using devpilot-id or CSS selector with accessibility tree information. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
-            selector: z.string().describe('CSS selector to query elements'),
+            selector: z.string().describe('Element identifier - can be devpilot-id (e.g., "e123") or CSS selector (e.g., "#myId", ".myClass"). Priority: devpilot-id > CSS selector'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
           }),
@@ -169,7 +169,7 @@ export default <DevpilotPlugin>{
           inputSchema: z.object({
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
-            startNodeId: z.string().optional().describe('Element ID to start snapshot from (e.g., "e123"). If provided, snapshot will be limited to this element and its children'),
+            startNodeId: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to start snapshot from. Priority: devpilot-id > CSS selector. If provided, snapshot will be limited to this element and its children'),
           }),
         },
         async (params) => {
@@ -203,9 +203,9 @@ export default <DevpilotPlugin>{
         'click_element_by_id',
         {
           title: 'Click Element by ID',
-          description: 'Click an element by its snapshot ID (e.g., e123 from @e123 [button] "Submit")',
+          description: 'Click an element by its identifier. Supports devpilot-id (e.g., e123 from @e123 [button] "Submit") or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
-            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#submitBtn"'),
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
           }),
         },
@@ -223,9 +223,9 @@ export default <DevpilotPlugin>{
         'input_text_by_id',
         {
           title: 'Input Text by ID',
-          description: 'Input text into an element by its snapshot ID (e.g., e123 from @e123 [input] "placeholder")',
+          description: 'Input text into an element by its identifier. Supports devpilot-id (e.g., e123 from @e123 [input] "placeholder") or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
-            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myInput"'),
             text: z.string().describe('Text to input'),
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
           }),
@@ -244,9 +244,9 @@ export default <DevpilotPlugin>{
         'get_element_info_by_id',
         {
           title: 'Get Element Info by ID',
-          description: 'Get detailed information about an element by its snapshot ID (e.g., e123)',
+          description: 'Get detailed information about an element by its identifier. Supports devpilot-id or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
-            id: z.string().describe('Element ID from snapshot (e.g., e123)'),
+            id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"'),
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
           }),
         },
@@ -308,7 +308,7 @@ export default <DevpilotPlugin>{
           description: 'Get visual layout hierarchy of DOM elements. Automatically detects which child elements fully cover the target element. Returns multiple levels of snapshots showing visual coverage relationships. Use this to quickly understand page structure before calling get_compact_snapshot.',
           inputSchema: z.object({
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
-            id: z.string().optional().describe('Element ID to analyze (defaults to body)'),
+            id: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to analyze. Priority: devpilot-id > CSS selector. Defaults to body'),
             maxDepth: z.number().optional().default(15).describe('Maximum depth to traverse'),
           }),
         },

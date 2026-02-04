@@ -98,15 +98,41 @@ export interface GetLayoutResult {
 
 export interface DomInspectorRpc {
   // Compact snapshot (agent-browser style)
+  /**
+   * Get a compact DOM snapshot
+   * @param options.startNodeId - Element identifier (devpilot-id or CSS selector). Snapshot will start from this element
+   */
   getCompactSnapshot: (options?: { maxDepth?: number, startNodeId?: string }) => Promise<Omit<CompactSnapshotResult, 'snapshot'>>
+
+  /**
+   * Click an element
+   * @param id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   */
   clickElementById: (id: string) => Promise<ElementActionResult>
+
+  /**
+   * Input text into an element
+   * @param id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   */
   inputTextById: (id: string, text: string) => Promise<ElementActionResult>
+
+  /**
+   * Get element information
+   * @param id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   */
   getElementInfoById: (id: string) => Promise<ElementInfo>
 
-  // Layout analysis - automatically detects visual coverage hierarchy
+  /**
+   * Get visual layout hierarchy
+   * @param options.id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Defaults to body
+   */
   getLayout: (options?: { id?: string, maxDepth?: number }) => Promise<Omit<GetLayoutResult, 'layout'>>
 
   // Legacy methods
+  /**
+   * Query DOM elements using CSS selector or devpilot-id
+   * @param selector - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   */
   querySelector: (selector: string, maxDepth?: number) => Promise<QuerySelectorResult>
   getDOMTree: (maxDepth?: number) => Promise<GetDOMTreeResult>
   getLogs: (options?: { level?: 'all' | 'error' | 'warn' | 'info' | 'debug', limit?: number }) => Promise<GetLogsResult>

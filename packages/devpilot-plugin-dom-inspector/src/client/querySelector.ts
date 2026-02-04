@@ -1,10 +1,11 @@
 import type { AccessibilityNode, QuerySelectorResult } from '../shared-types';
 import { buildAccessibilityTree } from './utils';
+import { resolveElementsBySelector } from './utils/resolveSelector';
 
 export async function querySelector(selector: string, maxDepth = 5): Promise<QuerySelectorResult> {
   try {
     console.log('[devpilot-dom-inspector] querySelector called with:', selector);
-    const elements = document.querySelectorAll(selector);
+    const elements = resolveElementsBySelector(selector);
     console.log('[devpilot-dom-inspector] Found elements:', elements.length);
     const results: Array<AccessibilityNode & { matchedSelector: string }> = [];
 

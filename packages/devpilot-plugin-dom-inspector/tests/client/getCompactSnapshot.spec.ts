@@ -104,7 +104,7 @@ describe('getCompactSnapshot', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Element with ID nonexistent not found');
+    expect(result.error).toContain('Element not found for selector: "nonexistent"');
     expect(result.snapshot).toBe('');
   });
 

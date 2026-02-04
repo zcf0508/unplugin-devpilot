@@ -28,10 +28,13 @@ describe('querySelector', () => {
     expect(result.elements).toHaveLength(0);
   });
 
-  it('should return error for invalid selector', async () => {
+  it('should return empty array for invalid selector', async () => {
+    // Invalid CSS selector should return empty array (no error)
+    // because we try devpilot-id first, then CSS selector
     const result = await querySelector('[[[invalid', 5);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
+    expect(result.success).toBe(true);
+    expect(result.matchedCount).toBe(0);
+    expect(result.elements).toHaveLength(0);
   });
 });
