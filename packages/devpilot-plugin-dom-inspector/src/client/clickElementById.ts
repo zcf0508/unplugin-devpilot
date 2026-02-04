@@ -27,15 +27,47 @@ export async function clickElementById(id: string): Promise<ElementActionResult>
         };
       }
 
-      // Check if element is visible (has offsetParent)
-      if (element.offsetParent === null) {
+      // Check if element is visible
+      // Note: offsetParent can be null for position:fixed elements, which are still visible
+      // Use getComputedStyle for more accurate visibility check
+      const style = window.getComputedStyle(element);
+      if (
+        style.display === 'none'
+        || style.visibility === 'hidden'
+        || style.opacity === '0'
+        || element.hidden
+      ) {
         return {
           success: false,
           error: `Element with ID ${id} is not visible`,
         };
       }
 
-      element.click();
+      // Check if element has zero size (might be hidden by other means)
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        return {
+          success: false,
+          error: `Element with ID ${id} has zero size and cannot be clicked`,
+        };
+      }
+
+      // Use dispatchEvent for more reliable click triggering
+      // This helps with frameworks that use synthetic events (React, Vue, etc.)
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      });
+
+      const result = element.dispatchEvent(clickEvent);
+      if (!result) {
+        return {
+          success: false,
+          error: 'Click event was cancelled by the element',
+        };
+      }
+
       console.log('[devpilot-dom-inspector] clickElementById success');
       return { success: true };
     }
