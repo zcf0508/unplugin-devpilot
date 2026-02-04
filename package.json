@@ -7,7 +7,7 @@
     "lint:fix": "pnpm run lint --fix",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "release": "bumpp"
+    "release": "bumpp -r"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.2.0",
