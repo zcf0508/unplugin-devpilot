@@ -1,10 +1,18 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCompactSnapshot } from '../../src/client/getCompactSnapshot';
+
+// Mock getDevpilotClient
+vi.mock('unplugin-devpilot/client', () => ({
+  getDevpilotClient: () => ({
+    getClientId: () => 'test_client_id',
+  }),
+}));
 
 describe('getCompactSnapshot', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
   });
+
   it('should return compact snapshot', async () => {
     document.body.innerHTML = `
           <div class="container">
