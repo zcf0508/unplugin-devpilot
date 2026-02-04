@@ -19,7 +19,7 @@ export interface CompactSnapshotResult {
   title: string
   /**
    * @internal
-   * 
+   *
    * for test
    */
   snapshot: string // Raw compact format: "@{id} [tag] \"text\" [key=value]"
@@ -86,7 +86,7 @@ export interface GetLayoutResult {
   }
   /**
    * @internal
-   * 
+   *
    * for test
    */
   layout: Record<string, string> | null // level -> snapshot string

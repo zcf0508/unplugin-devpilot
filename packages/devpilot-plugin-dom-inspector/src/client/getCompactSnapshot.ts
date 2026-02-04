@@ -13,7 +13,7 @@ function getClientId(): string {
 // Similar to getLayout's formatLayoutForLLM - handles all formatting on client side
 function formatSnapshotForLLM(snapshot: string, url: string, title: string): string {
   let formatted = '# DOM Structure Snapshot\n\n';
-  formatted += `## Page Context\n`;
+  formatted += '## Page Context\n';
   formatted += `- **URL:** ${url}\n`;
   formatted += `- **Title:** ${title}\n`;
   formatted += `- **Timestamp:** ${new Date().toISOString()}\n\n`;
