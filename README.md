@@ -1,5 +1,9 @@
 # unplugin-devpilot
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zcf0508/unplugin-devpilot)
+
+[中文版本](./README_CN.md)
+
 A universal plugin framework for development tools that enables seamless browser-server communication and MCP (Model Context Protocol) integration with AI/LLM systems.
 
 ## Features
