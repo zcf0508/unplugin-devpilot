@@ -5,6 +5,10 @@
   "description": "Description.",
   "author": "zcf0508 <zcf0508@live.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zcf0508/unplugin-devpilot.git"
+  },
   "exports": {
     ".": "./dist/index.mjs",
     "./client": "./dist/client/index.mjs",
