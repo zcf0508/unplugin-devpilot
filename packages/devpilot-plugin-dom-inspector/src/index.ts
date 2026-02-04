@@ -55,20 +55,22 @@ function generateClientNotFoundErrorSuggestions(
   return suggestions;
 }
 
+// Result type for handleClientRpc - allows callers to work with structured data
+type RpcResult<T>
+  = | { success: true, data: T }
+    | { success: false, error: string, details?: string, suggestions?: string[], availableClients?: any[] };
+
 // Helper function to handle client RPC calls with common error handling
+// Returns structured data instead of serialized string, making it easier for callers to process
 async function handleClientRpc<T>(
   clientId: string | undefined,
   rpcMethod: (client: NonNullable<ReturnType<typeof clientManager.getClient<DomInspectorRpc>>>) => Promise<T>,
-): Promise<{ content: Array<{ type: 'text', text: string }> }> {
+): Promise<RpcResult<T>> {
   if (!clientId) {
     return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify({
-          error: 'No client specified. Either provide clientId parameter or call within a task context.',
-          suggestion: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
-        }, null, 2),
-      }],
+      success: false,
+      error: 'No client specified. Either provide clientId parameter or call within a task context.',
+      details: 'Use list_clients tool to see available clients, or specify clientId explicitly.',
     };
   }
 
@@ -76,35 +78,50 @@ async function handleClientRpc<T>(
   if (!client) {
     const availableClients = clientManager.getAllClients();
     return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify({
-          error: `Client ${clientId} not found or disconnected`,
-          suggestions: generateClientNotFoundErrorSuggestions(clientId, availableClients),
-          availableClients,
-        }, null, 2),
-      }],
+      success: false,
+      error: `Client ${clientId} not found or disconnected`,
+      suggestions: generateClientNotFoundErrorSuggestions(clientId, availableClients),
+      availableClients,
     };
   }
 
   try {
     const result = await rpcMethod(client);
     return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify(result, null, 2),
-      }],
+      success: true,
+      data: result,
     };
   }
   catch (error) {
     return {
+      success: false,
+      error: 'RPC call failed',
+      details: error instanceof Error
+        ? error.message
+        : String(error),
+    };
+  }
+}
+
+// Convert RpcResult to MCP tool response format
+function toMcpResponse<T>(result: RpcResult<T>): { content: Array<{ type: 'text', text: string }> } {
+  if (result.success) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(result.data, null, 2),
+      }],
+    };
+  }
+  else {
+    return {
       content: [{
         type: 'text' as const,
         text: JSON.stringify({
-          error: 'RPC call failed',
-          details: error instanceof Error
-            ? error.message
-            : String(error),
+          error: result.error,
+          details: result.details,
+          suggestions: result.suggestions,
+          availableClients: result.availableClients,
         }, null, 2),
       }],
     };
@@ -136,9 +153,10 @@ export default <DevpilotPlugin>{
         },
         async (params) => {
           const { selector, clientId, maxDepth } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.querySelector(selector, maxDepth);
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -159,35 +177,12 @@ export default <DevpilotPlugin>{
             return await client.rpc.getCompactSnapshot(maxDepth);
           });
 
-          // Check if the RPC call failed
-          const rpcResult = result.content[0].text;
-          if (rpcResult.includes('"error"')) {
-            return result;
+          // Handle error case
+          if (!result.success) {
+            return toMcpResponse(result);
           }
 
-          // Parse the result to add markdown formatting
-          let parsedResult;
-          try {
-            parsedResult = JSON.parse(rpcResult);
-          }
-          catch (e) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'Failed to parse RPC result',
-                  details: e instanceof Error
-                    ? e.message
-                    : String(e),
-                  rawResult: rpcResult,
-                }, null, 2),
-              }],
-            };
-          }
-
-          if (!parsedResult.success) {
-            return result;
-          }
+          const parsedResult = result.data;
 
           const snapshotText = `# Compact DOM Snapshot
 
@@ -231,9 +226,10 @@ ${parsedResult.snapshot}
         },
         async (params) => {
           const { id, clientId } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.clickElementById(id);
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -251,9 +247,10 @@ ${parsedResult.snapshot}
         },
         async (params) => {
           const { id, text, clientId } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.inputTextById(id, text);
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -270,9 +267,10 @@ ${parsedResult.snapshot}
         },
         async (params) => {
           const { id, clientId } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.getElementInfoById(id);
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -289,9 +287,10 @@ ${parsedResult.snapshot}
         },
         async (params) => {
           const { clientId, maxDepth } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.getDOMTree(maxDepth);
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -309,9 +308,10 @@ ${parsedResult.snapshot}
         },
         async (params) => {
           const { clientId, level, limit } = params;
-          return handleClientRpc(clientId, async (client) => {
+          const result = await handleClientRpc(clientId, async (client) => {
             return await client.rpc.getLogs({ level, limit });
           });
+          return toMcpResponse(result);
         },
       ),
 
@@ -333,34 +333,12 @@ ${parsedResult.snapshot}
             return await client.rpc.getLayout({ id, maxDepth });
           });
 
-          // Parse and check for errors
-          const rpcResult = result.content[0].text;
-          if (rpcResult.includes('"error"')) {
-            return result;
+          // Handle error case
+          if (!result.success) {
+            return toMcpResponse(result);
           }
 
-          let parsedResult;
-          try {
-            parsedResult = JSON.parse(rpcResult);
-          }
-          catch (e) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: JSON.stringify({
-                  error: 'Failed to parse RPC result',
-                  details: e instanceof Error
-                    ? e.message
-                    : String(e),
-                  rawResult: rpcResult,
-                }, null, 2),
-              }],
-            };
-          }
-
-          if (!parsedResult.success) {
-            return result;
-          }
+          const parsedResult = result.data;
 
           // Return the formatted layout from client (already contains LLM-friendly format)
           return {
