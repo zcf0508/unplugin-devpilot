@@ -184,25 +184,9 @@ export default <DevpilotPlugin>{
 
           const parsedResult = result.data;
 
-          const snapshotText = `# Compact DOM Snapshot
-
-**Client ID:** ${parsedResult.clientId}
-**URL:** ${parsedResult.url}
-**Title:** ${parsedResult.title}
-**Timestamp:** ${new Date(parsedResult.timestamp).toISOString()}
-
-## Snapshot
-
-\`\`\`
-${parsedResult.snapshot}
-\`\`\`
-
-## Usage
-- Use the @id format (e.g., @e123) to reference elements
-- Call click_element_by_id({ id: "e123" }) to click
-- Call input_text_by_id({ id: "e123", text: "value" }) to input text
-- Call get_element_info_by_id({ id: "e123" }) to get details
-`;
+          // Return the formatted snapshot from client (already contains LLM-friendly format)
+          // Similar to get_layout's approach - client handles all formatting
+          const snapshotText = parsedResult.formattedSnapshot || 'No snapshot data available';
 
           return {
             content: [{

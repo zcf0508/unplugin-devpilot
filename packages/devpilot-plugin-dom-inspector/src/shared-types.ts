@@ -17,7 +17,13 @@ export interface CompactSnapshotResult {
   timestamp: number
   url: string
   title: string
-  snapshot: string // Compact format: "@{id} [tag] \"text\" [key=value]"
+  /**
+   * @internal
+   * 
+   * for test
+   */
+  snapshot: string // Raw compact format: "@{id} [tag] \"text\" [key=value]"
+  formattedSnapshot?: string | null // LLM-friendly formatted snapshot with context and guide
   error?: string
 }
 
@@ -78,6 +84,11 @@ export interface GetLayoutResult {
     width: number
     height: number
   }
+  /**
+   * @internal
+   * 
+   * for test
+   */
   layout: Record<string, string> | null // level -> snapshot string
   formattedLayout?: string | null // LLM-friendly formatted layout with all levels
   depth: number
@@ -87,7 +98,7 @@ export interface GetLayoutResult {
 
 export interface DomInspectorRpc {
   // Compact snapshot (agent-browser style)
-  getCompactSnapshot: (maxDepth?: number) => Promise<CompactSnapshotResult>
+  getCompactSnapshot: (maxDepth?: number) => Promise<Omit<CompactSnapshotResult, 'snapshot'>>
   clickElementById: (id: string) => Promise<ElementActionResult>
   inputTextById: (id: string, text: string) => Promise<ElementActionResult>
   getElementInfoById: (id: string) => Promise<ElementInfo>
