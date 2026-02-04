@@ -365,6 +365,65 @@ export function getInteractiveState(element: Element): string[] {
   return states;
 }
 
+// Helper function to get ARIA role
+function getAriaRole(element: Element): string {
+  const role = element.getAttribute('role');
+  if (role) {
+    return role;
+  }
+  return inferRoleFromTag(element.tagName.toLowerCase());
+}
+
+// Helper function to get visual context (position, size, visibility)
+function getVisualContext(element: Element): string[] {
+  const context: string[] = [];
+
+  if (element instanceof HTMLElement) {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+
+    // Size information (only if visible)
+    if (rect.width > 0 && rect.height > 0) {
+      context.push(`size:${Math.round(rect.width)}x${Math.round(rect.height)}`);
+    }
+
+    // Position (relative to viewport)
+    if (rect.width > 0 && rect.height > 0) {
+      context.push(`pos:${Math.round(rect.left)},${Math.round(rect.top)}`);
+    }
+
+    // Visibility state
+    if (style.visibility === 'hidden') {
+      context.push('invisible');
+    }
+    if (style.opacity === '0') {
+      context.push('transparent');
+    }
+    if (style.display === 'none') {
+      context.push('display:none');
+    }
+
+    // Z-index
+    const zIndex = style.zIndex;
+    if (zIndex && zIndex !== 'auto') {
+      context.push(`z:${zIndex}`);
+    }
+
+    // Positioning type
+    if (style.position === 'fixed') {
+      context.push('fixed');
+    }
+    else if (style.position === 'absolute') {
+      context.push('absolute');
+    }
+    else if (style.position === 'sticky') {
+      context.push('sticky');
+    }
+  }
+
+  return context;
+}
+
 // Helper function to get compact attributes
 function getCompactAttributes(element: Element): string[] {
   const attrs: string[] = [];
@@ -424,15 +483,32 @@ export function buildCompactSnapshot(
   const tag = element.tagName.toLowerCase();
   const text = getVisibleText(element);
   const attrs = getCompactAttributes(element);
+  const role = getAriaRole(element);
+  const visualContext = getVisualContext(element);
 
+  // Build line: @id [tag] <role> "text" [attrs] {visual}
   let line = `${indent}@${id} [${tag}]`;
+
+  // Add ARIA role (only if not generic to reduce noise)
+  if (role && role !== 'generic') {
+    line += ` <${role}>`;
+  }
+
+  // Add visible text or accessible name
   if (text) {
     // Escape double quotes in text to preserve snapshot format
     const escapedText = text.replace(/"/g, '\\"');
     line += ` "${escapedText}"`;
   }
+
+  // Add attributes and states
   if (attrs.length > 0) {
     line += ` [${attrs.join(' ')}]`;
+  }
+
+  // Add visual context (position, size, visibility)
+  if (visualContext.length > 0) {
+    line += ` {${visualContext.join(' ')}}`;
   }
 
   lines.push(line);
