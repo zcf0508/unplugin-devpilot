@@ -33,5 +33,5 @@ jobs:
 
       - name: Test
         run: |
-          pnpm exec playwright install
+          pnpm exec playwright install chromium
           pnpm run test
