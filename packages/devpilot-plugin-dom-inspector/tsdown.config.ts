@@ -7,11 +7,13 @@ export default defineConfig([
       'src/*.ts',
     ],
     dts: true,
+    inlineOnly: false,
   },
   {
     entry: [
       'src/client/index.ts',
     ],
     outDir: 'dist/client',
+    inlineOnly: false,
   },
 ]);

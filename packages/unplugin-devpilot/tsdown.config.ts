@@ -7,6 +7,7 @@ export default defineConfig([
       'src/*.ts',
     ],
     dts: true,
+    inlineOnly: false,
   },
   {
     entry: [
@@ -14,6 +15,7 @@ export default defineConfig([
     ],
     outDir: 'dist/client',
     dts: true,
+    inlineOnly: false,
     hooks: {
       'build:done': () => {
         mkdirSync('dist/client', { recursive: true });
