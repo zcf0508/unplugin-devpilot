@@ -1,5 +1,6 @@
 import type { UnpluginInstance } from 'unplugin';
 import type { DevpilotPlugin, Options, OptionsResolved } from './core/options';
+import process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
@@ -20,7 +21,12 @@ function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResol
     });
 }
 
-function generateVirtualClientModule(options: OptionsResolved): string {
+function generateVirtualClientModule(options: OptionsResolved, isDev: boolean): string {
+  // In non-dev mode, return empty module
+  if (!isDev) {
+    return '';
+  }
+
   const pluginModules = getPluginClientModules(options.plugins, options);
 
   // Generate dynamic imports for all plugin modules
@@ -86,11 +92,13 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       load(id) {
         if (id === RESOLVED_VIRTUAL_MODULE_ID) {
-          return generateVirtualClientModule(options);
+          return generateVirtualClientModule(options, process.env.NODE_ENV !== 'production');
         }
       },
 
       buildStart() {
+        // Only start servers in development mode
+        if (process.env.NODE_ENV === 'production') { return; }
         startServers();
       },
 
