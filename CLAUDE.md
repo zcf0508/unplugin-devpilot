@@ -1,1 +1,1 @@
-- always see [AGENTS.md](./AGENTS.md)
+- always read [AGENTS.md](./AGENTS.md) first
