@@ -110,14 +110,15 @@ Core plugin framework providing:
 
 Built-in DOM inspection plugin offering:
 - Compact DOM snapshots optimized for LLM tokens
-- Element querying via devpilot-id or CSS selectors
+- Element querying via devpilot-id or CSS selectors (supports :has() and advanced selectors)
 - Element interaction (click, text input)
+- Scroll elements into view
 - Visual layout analysis
 - Browser console log access
-- 8 MCP tools for web automation
+- 9 MCP tools for web automation
 
 **MCP Tools:**
-- `query_selector` - Query DOM elements
+- `query_selector` - Query DOM elements with accessibility tree (returns `devpilotId` for use in other APIs)
 - `get_compact_snapshot` - Get LLM-friendly DOM structure
 - `click_element_by_id` - Click elements
 - `input_text_by_id` - Fill form fields
@@ -125,6 +126,9 @@ Built-in DOM inspection plugin offering:
 - `get_dom_tree` - Get full accessibility tree
 - `get_logs` - Access browser logs
 - `get_layout` - Analyze visual layout hierarchy
+- `scroll_to_element` - Scroll element into view (for scrollable containers)
+
+**Element ID Format:** All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). The `query_selector` tool returns `devpilotId` in this format, which can be directly used in other APIs.
 
 ## Use Cases
 

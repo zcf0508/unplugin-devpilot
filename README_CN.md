@@ -106,14 +106,15 @@ import 'virtual:devpilot-client';
 
 内置的 DOM 检查插件，提供：
 - 优化 LLM token 使用的紧凑 DOM 快照
-- 通过 devpilot-id 或 CSS 选择器查询元素
+- 通过 devpilot-id 或 CSS 选择器查询元素（支持 :has() 和高级选择器）
 - 元素交互功能（点击、输入文本）
+- 滚动元素到视口
 - 视觉布局分析
 - 浏览器控制台日志访问
-- 8 个用于网页自动化的 MCP 工具
+- 9 个用于网页自动化的 MCP 工具
 
 **MCP 工具：**
-- `query_selector` - 查询 DOM 元素
+- `query_selector` - 查询 DOM 元素（带可访问性树，返回 `devpilotId` 用于其他 API）
 - `get_compact_snapshot` - 获取 LLM 友好的 DOM 结构
 - `click_element_by_id` - 点击元素
 - `input_text_by_id` - 填充表单字段
@@ -121,6 +122,9 @@ import 'virtual:devpilot-client';
 - `get_dom_tree` - 获取完整的可访问性树
 - `get_logs` - 访问浏览器日志
 - `get_layout` - 分析视觉布局层级
+- `scroll_to_element` - 滚动元素到视口（用于滚动容器）
+
+**元素 ID 格式：** 所有元素标识符使用 `e` 前缀格式（如 `e1`, `e2`, `e123`）。`query_selector` 工具返回的 `devpilotId` 采用此格式，可直接用于其他 API。
 
 ## 使用场景
 

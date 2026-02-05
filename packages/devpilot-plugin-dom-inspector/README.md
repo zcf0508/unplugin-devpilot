@@ -6,6 +6,14 @@ DOM Inspector plugin for unplugin-devpilot - provides tools for querying and ins
 
 This plugin provides several MCP tools for DOM inspection and interaction.
 
+### Element ID Format
+
+All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). This format is consistent across:
+
+- **query_selector** returns `devpilotId` in this format
+- **User-provided devpilot-id** attributes (e.g., `data-devpilot-id="e123"`)
+- **All API parameters** that accept element identifiers
+
 ### Selector Resolution (Priority Order)
 
 **IMPORTANT:** All tools that accept element identifiers support both `devpilot-id` and CSS selectors with the following priority:
@@ -29,6 +37,7 @@ Query DOM elements using devpilot-id or CSS selectors with accessibility tree in
 
 **Returns:**
 - Array of matched elements with accessibility information (role, name, value, children, etc.)
+- Each element includes `devpilotId` field (format: `e1`, `e2`, ...) that can be used in other APIs
 
 ### 2. `get_compact_snapshot`
 
@@ -115,6 +124,20 @@ Get browser console logs including errors, warnings, and user logs.
 - Captured console logs with timestamps and stack traces
 - Includes errors, warnings, info, and debug messages
 
+### 9. `scroll_to_element`
+
+Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport.
+
+**Parameters:**
+- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"
+- `clientId` (string, optional): Target client ID (defaults to task source client)
+- `behavior` (enum, optional, default: "smooth"): Scroll behavior - "smooth" (animated) or "auto" (instant)
+
+**Returns:**
+- Success status or error message
+
+**Note:** After scrolling, you can call `get_compact_snapshot` to see the updated view.
+
 ## Usage
 
 This plugin is automatically loaded by unplugin-devpilot. To use these tools:
@@ -137,6 +160,14 @@ const element = await mcp.call('builtin-dom-inspector_query_selector', {
   selector: 'e123', // Tries data-devpilot-id="e123" first, then CSS selector #e123
   clientId: 'c_abc123',
 });
+
+// Query element and get devpilotId for use in other APIs
+const queryResult = await mcp.call('builtin-dom-inspector_query_selector', {
+  selector: '.my-button',
+  clientId: 'c_abc123',
+});
+const devpilotId = queryResult.elements[0].devpilotId; // e.g., "e1", "e2", ...
+// Now devpilotId can be used in click_element_by_id, scroll_to_element, etc.
 
 // Click element by devpilot-id
 await mcp.call('builtin-dom-inspector_click_element_by_id', {
@@ -175,6 +206,30 @@ const logs = await mcp.call('builtin-dom-inspector_get_logs', {
   clientId: 'c_abc123',
   level: 'error',
   limit: 50,
+});
+
+// Scroll element into view (if in scrollable container)
+await mcp.call('builtin-dom-inspector_scroll_to_element', {
+  id: 'e123', // devpilot-id or CSS selector
+  clientId: 'c_abc123',
+  behavior: 'smooth', // or 'auto'
+});
+
+// Query element, scroll to it, then get snapshot
+const result = await mcp.call('builtin-dom-inspector_query_selector', {
+  selector: '.ayu-card:has(.i-lucide-pause-circle)',
+  clientId: 'c_abc123',
+});
+const devpilotId = result.elements[0].devpilotId;
+
+await mcp.call('builtin-dom-inspector_scroll_to_element', {
+  id: devpilotId,
+  clientId: 'c_abc123',
+});
+
+const snapshot = await mcp.call('builtin-dom-inspector_get_compact_snapshot', {
+  startNodeId: devpilotId,
+  clientId: 'c_abc123',
 });
 ```
 
