@@ -76,10 +76,10 @@ import Devpilot from 'unplugin-devpilot/vite';
 export default defineConfig({
   plugins: [
     Devpilot({
-      wsPort: 3100,    // Optional: Specify WebSocket port (will be randomly allocated if not specified)
-      mcpPort: 3101,   // Optional: Specify MCP server port (will use random port if specified port is occupied)
-      plugins: []      // Optional: Array of DevpilotPlugin instances
-    })
+      wsPort: 3100, // Optional: Specify WebSocket port (will be randomly allocated if not specified)
+      mcpPort: 3101, // Optional: Specify MCP server port (will use random port if specified port is occupied)
+      plugins: [], // Optional: Array of DevpilotPlugin instances
+    }),
   ],
 });
 ```
