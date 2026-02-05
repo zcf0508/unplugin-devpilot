@@ -65,6 +65,32 @@ import 'virtual:devpilot-client';
 
 This import activates the WebSocket connection to the development server and initializes all registered plugins on the client side.
 
+## Configuration
+
+You can customize the plugin behavior by passing options:
+
+```ts
+// vite.config.ts
+import Devpilot from 'unplugin-devpilot/vite';
+
+export default defineConfig({
+  plugins: [
+    Devpilot({
+      wsPort: 3100,    // Optional: Specify WebSocket port (will be randomly allocated if not specified)
+      mcpPort: 3101,   // Optional: Specify MCP server port (will use random port if specified port is occupied)
+      plugins: []      // Optional: Array of DevpilotPlugin instances
+    })
+  ],
+});
+```
+
+### Port Allocation Strategy
+
+- **wsPort**: When provided, the specified port is used if available; otherwise, a random available port is allocated. When not provided, a random available port is automatically allocated
+- **mcpPort**: When not provided, defaults to 3101. If the port is already in use, an error will be thrown
+
+This ensures your MCP server runs on a predictable port. If the default port is occupied, you'll need to specify a different port or free up the occupied port.
+
 ## License
 
 [MIT](./LICENSE) License © 2025-PRESENT [Huali](https://github.com/zcf0508)

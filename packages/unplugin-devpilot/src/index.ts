@@ -53,20 +53,28 @@ ${handlerCollection}
 
 export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   = createUnplugin((rawOptions = {}) => {
-    const options = resolveOptions(rawOptions);
+    let options: OptionsResolved | null = null;
     let serversStarted = false;
 
     const name = 'unplugin-devpilot';
 
+    async function ensureOptionsResolved() {
+      if (!options) {
+        options = await resolveOptions(rawOptions);
+      }
+      return options;
+    }
+
     async function startServers() {
       if (serversStarted) { return; }
       serversStarted = true;
+      const resolvedOptions = await ensureOptionsResolved();
       // Register plugin server methods before starting WebSocket server
-      registerPluginServerMethods(options.plugins);
+      registerPluginServerMethods(resolvedOptions.plugins);
       // Register plugin mcp register methods before starting WebSocket server
-      registerPluginMcpRegisterMethods(options.plugins);
-      startWebSocketServer(options.wsPort);
-      await startMcpServer(options.mcpPort);
+      registerPluginMcpRegisterMethods(resolvedOptions.plugins);
+      startWebSocketServer(resolvedOptions.wsPort);
+      await startMcpServer(resolvedOptions.mcpPort);
     }
 
     function stopServers() {
@@ -90,16 +98,17 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         return id === RESOLVED_VIRTUAL_MODULE_ID;
       },
 
-      load(id) {
+      async load(id) {
         if (id === RESOLVED_VIRTUAL_MODULE_ID) {
-          return generateVirtualClientModule(options, process.env.NODE_ENV !== 'production');
+          const resolvedOptions = await ensureOptionsResolved();
+          return generateVirtualClientModule(resolvedOptions, process.env.NODE_ENV !== 'production');
         }
       },
 
       buildStart() {
         // Only start servers in development mode
         if (process.env.NODE_ENV === 'production') { return; }
-        startServers();
+        return startServers();
       },
 
       buildEnd() {
@@ -108,7 +117,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       vite: {
         configureServer() {
-          startServers();
+          return startServers();
         },
       },
 

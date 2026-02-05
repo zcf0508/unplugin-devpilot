@@ -1,4 +1,5 @@
 import type { DevpilotPluginContext, McpServerRegister } from './plugin';
+import { checkPort, getRandomPort } from 'get-port-please';
 
 export interface DevpilotPlugin {
   namespace: string
@@ -32,10 +33,36 @@ export interface Options {
 
 export type OptionsResolved = Required<Options>;
 
-export function resolveOptions(options: Options): OptionsResolved {
+export async function resolveOptions(options: Options): Promise<OptionsResolved> {
+  // wsPort: use specified port if available, otherwise randomly allocate
+  let wsPort: number;
+  if (options.wsPort !== undefined) {
+    const wsPortInUse = await checkPort(options.wsPort);
+    if (wsPortInUse === false) {
+      wsPort = options.wsPort;
+    }
+    else {
+      wsPort = await getRandomPort();
+    }
+  }
+  else {
+    wsPort = await getRandomPort();
+  }
+
+  // mcpPort checks if the specified port (or default 3101) is available
+  // If occupied, throw an error
+  const preferredMcpPort = options.mcpPort || 3101;
+  const portInUse = await checkPort(preferredMcpPort);
+
+  if (portInUse !== false) {
+    throw new Error(
+      `MCP port ${preferredMcpPort} is already in use. Please specify a different port or free up the port.`,
+    );
+  }
+
   return {
-    wsPort: options.wsPort || 3100,
-    mcpPort: options.mcpPort || 3101,
+    wsPort,
+    mcpPort: preferredMcpPort,
     plugins: options.plugins || [],
   };
 }

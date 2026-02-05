@@ -69,6 +69,7 @@
     "@types/ws": "^8.18.1",
     "birpc": "^4.0.0",
     "es-toolkit": "^1.44.0",
+    "get-port-please": "^3.2.0",
     "hookable": "^6.0.1",
     "mitt": "^3.0.1",
     "ws": "^8.19.0",

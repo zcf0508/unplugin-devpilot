@@ -106,10 +106,6 @@ Core plugin framework providing:
 - Plugin system with namespace isolation
 - Virtual module generation for client-side code
 
-**Default Ports:**
-- WebSocket: 3100
-- MCP: 3101
-
 ### [devpilot-plugin-dom-inspector](./packages/devpilot-plugin-dom-inspector)
 
 Built-in DOM inspection plugin offering:
@@ -269,13 +265,22 @@ pnpm typecheck
 ## Configuration
 
 ### Port Configuration
+
+The plugin automatically manages port allocation to prevent conflicts:
+
 ```ts
 Devpilot({
-  wsPort: 3100, // WebSocket server port
-  mcpPort: 3101, // MCP server port
+  wsPort: 3100, // Optional: WebSocket server port (random if not specified)
+  mcpPort: 3101, // Optional: MCP server port (random if occupied)
   plugins: [/* ... */],
 });
 ```
+
+**Port Allocation Strategy:**
+- **wsPort**: When provided, the specified port is used if available; otherwise, a random available port is allocated. When not provided, a random available port is automatically allocated. This ensures no port conflicts.
+- **mcpPort**: When not provided, defaults to 3101. If the port is already in use, an error will be thrown.
+
+This ensures your MCP server runs on a predictable port. If the default port is occupied, you'll need to specify a different port or free up the occupied port.
 
 ### Plugin Options
 Each plugin can be configured based on its implementation. Refer to individual plugin documentation.

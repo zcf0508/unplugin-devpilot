@@ -102,10 +102,6 @@ import 'virtual:devpilot-client';
 - 带命名空间隔离的插件系统
 - 客户端代码的虚拟模块生成
 
-**默认端口：**
-- WebSocket: 3100
-- MCP: 3101
-
 ### [devpilot-plugin-dom-inspector](./packages/devpilot-plugin-dom-inspector)
 
 内置的 DOM 检查插件，提供：
@@ -266,13 +262,22 @@ pnpm typecheck
 ## 配置
 
 ### 端口配置
+
+插件会自动管理端口分配以防止冲突：
+
 ```ts
 Devpilot({
-  wsPort: 3100, // WebSocket 服务器端口
-  mcpPort: 3101, // MCP 服务器端口
+  wsPort: 3100, // 可选：WebSocket 服务器端口（未指定时随机分配）
+  mcpPort: 3101, // 可选：MCP 服务器端口（被占用时会报错）
   plugins: [/* ... */],
 });
 ```
+
+**端口分配策略：**
+- **wsPort**: 提供时，如果端口可用则使用该端口；否则随机分配一个可用端口。未提供时，自动分配一个随机可用端口。这确保没有端口冲突。
+- **mcpPort**: 未提供时，默认使用 3101。如果该端口已被占用，会抛出错误。
+
+这确保你的 MCP 服务器在可预测的端口上运行。如果默认端口被占用，你需要指定不同的端口或释放被占用的端口。
 
 ### 插件选项
 每个插件可以根据其实现进行配置。请参考各个插件的文档。
