@@ -10,7 +10,7 @@ describe('mCP Tools - Node Side', () => {
     const mockClient = {
       rpc: {
         querySelector: vi.fn().mockResolvedValue({ success: true, matchedCount: 1, elements: [] }),
-        getDOMTree: vi.fn().mockResolvedValue({ success: true, tree: { uid: 'root', role: 'document', name: null } }),
+        getDOMTree: vi.fn().mockResolvedValue({ success: true, tree: { devpilotId: 'root', role: 'document', name: null } }),
         getLogs: vi.fn().mockResolvedValue({ success: true, logs: [], total: 0, filtered: 0, level: 'all' }),
         getLayout: vi.fn().mockResolvedValue({
           success: true,

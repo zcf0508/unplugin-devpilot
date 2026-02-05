@@ -4,7 +4,7 @@ import { buildAccessibilityTree } from './utils';
 export async function getDOMTree(maxDepth = 5): Promise<GetDOMTreeResult> {
   try {
     const tree: AccessibilityNode = {
-      uid: 'root',
+      devpilotId: 'root',
       role: 'document',
       name: document.title || null,
       attributes: {

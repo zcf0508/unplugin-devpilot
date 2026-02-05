@@ -1,13 +1,14 @@
 import type { AccessibilityNode } from '../../shared-types';
 import { uniqueId } from 'es-toolkit/compat';
 
-// Helper function to generate stable UIDs using es-toolkit
-function generateUid(): string {
-  return `node_${uniqueId()}`;
+// Helper function to generate stable devpilot-id using es-toolkit
+// Returns e-prefixed IDs (e.g., "e1", "e2") for consistency with devpilot-id format
+function generateDevpilotId(): string {
+  return `e${uniqueId()}`;
 }
 
 // Helper function to get accessibility information from an element
-export function getAccessibilityInfo(element: Element): Omit<AccessibilityNode, 'uid' | 'children'> {
+export function getAccessibilityInfo(element: Element): Omit<AccessibilityNode, 'devpilotId' | 'children'> {
   // Get role
   let role = 'unknown';
   if (element instanceof HTMLElement) {
@@ -113,6 +114,15 @@ export function getAccessibilityInfo(element: Element): Omit<AccessibilityNode, 
   };
 }
 
+// Extract devpilot-id from element or generate a new one
+function getDevpilotId(element: Element): string {
+  const existingId = element.getAttribute('data-devpilot-id');
+  if (existingId) {
+    return existingId;
+  }
+  return generateDevpilotId();
+}
+
 // Build accessibility tree recursively
 export function buildAccessibilityTree(
   element: Element,
@@ -132,7 +142,7 @@ export function buildAccessibilityTree(
   }
 
   const node: AccessibilityNode = {
-    uid: generateUid(),
+    devpilotId: getDevpilotId(element),
     ...getAccessibilityInfo(element),
   };
 

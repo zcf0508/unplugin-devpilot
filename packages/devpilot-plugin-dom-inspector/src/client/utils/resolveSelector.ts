@@ -39,7 +39,7 @@ function isLikelyDevpilotId(selector: string): boolean {
  * 1. Try as devpilot-id (data-devpilot-id attribute) - only for simple identifiers
  * 2. If not found, try as CSS selector
  *
- * @param selector - Element identifier, can be either devpilot-id or CSS selector
+ * @param selector - Element identifier, can be devpilot-id or CSS selector
  * @returns The resolved element or null if not found
  */
 export function resolveElementBySelector(selector: string): Element | null {
@@ -47,7 +47,8 @@ export function resolveElementBySelector(selector: string): Element | null {
     return null;
   }
 
-  // First, try as devpilot-id (priority 1) - only for simple identifiers
+  // Priority 1: Try as devpilot-id (only for simple identifiers)
+  // This handles devpilot-ids (e.g., "e1", "e123")
   if (isLikelyDevpilotId(selector)) {
     const devpilotIdSelector = `[data-devpilot-id="${selector}"]`;
     try {
@@ -64,7 +65,7 @@ export function resolveElementBySelector(selector: string): Element | null {
     }
   }
 
-  // If not found, try as CSS selector (priority 2)
+  // Priority 2: Try as CSS selector
   try {
     const elementByCss = document.querySelector(selector);
 
@@ -89,7 +90,7 @@ export function resolveElementBySelector(selector: string): Element | null {
  * 1. Try as devpilot-id (data-devpilot-id attribute) - only for simple identifiers
  * 2. If not found, try as CSS selector
  *
- * @param selector - Element identifier, can be either devpilot-id or CSS selector
+ * @param selector - Element identifier, can be devpilot-id or CSS selector
  * @returns Array of resolved elements (empty if none found)
  */
 export function resolveElementsBySelector(selector: string): Element[] {
@@ -97,7 +98,8 @@ export function resolveElementsBySelector(selector: string): Element[] {
     return [];
   }
 
-  // First, try as devpilot-id (priority 1) - only for simple identifiers
+  // Priority 1: Try as devpilot-id (only for simple identifiers)
+  // This handles devpilot-ids (e.g., "e1", "e123")
   if (isLikelyDevpilotId(selector)) {
     const devpilotIdSelector = `[data-devpilot-id="${selector}"]`;
     try {
@@ -114,7 +116,7 @@ export function resolveElementsBySelector(selector: string): Element[] {
     }
   }
 
-  // If not found, try as CSS selector (priority 2)
+  // Priority 2: Try as CSS selector
   try {
     const elementsByCss = Array.from(document.querySelectorAll(selector));
 

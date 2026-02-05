@@ -1,7 +1,7 @@
 // Shared types between server and client - no DOM dependencies
 
 export interface AccessibilityNode {
-  uid: string
+  devpilotId: string
   role: string
   name: string | null
   value?: string
@@ -127,6 +127,13 @@ export interface DomInspectorRpc {
    * @param options.id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Defaults to body
    */
   getLayout: (options?: { id?: string, maxDepth?: number }) => Promise<Omit<GetLayoutResult, 'layout'>>
+
+  /**
+   * Scroll an element into view
+   * @param id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   * @param behavior - Scroll behavior: 'smooth' (default) or 'auto'
+   */
+  scrollToElement: (id: string, behavior?: 'smooth' | 'auto') => Promise<ElementActionResult>
 
   // Legacy methods
   /**

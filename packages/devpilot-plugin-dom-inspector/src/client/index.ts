@@ -9,6 +9,7 @@ import { getLayout } from './getLayout';
 import { getLogs } from './getLogs';
 import { inputTextById } from './inputTextById';
 import { querySelector } from './querySelector';
+import { scrollToElement } from './scrollToElement';
 
 export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   // Compact snapshot - agent-browser style format
@@ -37,4 +38,7 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   ): Promise<Omit<GetLayoutResult, 'layout'>> => {
     return omit(await getLayout(options), 'layout');
   },
+
+  // Scroll element into view
+  scrollToElement,
 });

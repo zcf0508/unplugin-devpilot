@@ -144,7 +144,7 @@ export default <DevpilotPlugin>{
         'query_selector',
         {
           title: 'Query Selector',
-          description: 'Query DOM elements using devpilot-id or CSS selector with accessibility tree information. Priority: devpilot-id > CSS selector',
+          description: 'Query DOM elements using devpilot-id or CSS selector with accessibility tree information. Priority: devpilot-id > CSS selector. Returns elements with devpilotId field that can be used in other APIs.',
           inputSchema: z.object({
             selector: z.string().describe('Element identifier - can be devpilot-id (e.g., "e123") or CSS selector (e.g., "#myId", ".myClass"). Priority: devpilot-id > CSS selector'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
@@ -327,11 +327,29 @@ export default <DevpilotPlugin>{
 
           // Return the formatted layout from client (already contains LLM-friendly format)
           return {
-            content: [{
-              type: 'text' as const,
-              text: parsedResult.formattedLayout || 'No layout data available',
-            }],
+            content: [{ type: 'text' as const, text: parsedResult.formattedLayout || 'No layout data available' }],
           };
+        },
+      ),
+
+      // scroll_to_element - 滚动元素到视口
+      defineMcpToolRegister(
+        'scroll_to_element',
+        {
+          title: 'Scroll to Element',
+          description: 'Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport. After scrolling, you can call get_compact_snapshot to see the updated view.',
+          inputSchema: z.object({
+            id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"'),
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            behavior: z.enum(['smooth', 'auto']).optional().default('smooth').describe('Scroll behavior: smooth (animated) or auto (instant)'),
+          }),
+        },
+        async (params) => {
+          const { id, clientId, behavior } = params;
+          const result = await handleClientRpc(clientId, async (client) => {
+            return await client.rpc.scrollToElement(id, behavior);
+          });
+          return toMcpResponse(result);
         },
       ),
     ];

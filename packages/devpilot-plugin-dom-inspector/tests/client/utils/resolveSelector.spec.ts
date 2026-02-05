@@ -121,6 +121,17 @@ describe('resolveSelector', () => {
       expect(element).toBeTruthy();
       expect(element?.textContent).toBe('Element with special chars');
     });
+
+    it('should find element by devpilot-id (e-prefixed format)', () => {
+      document.body.innerHTML = `
+        <div data-devpilot-id="e1">Element with devpilot-id</div>
+      `;
+
+      const element = resolveElementBySelector('e1');
+
+      expect(element).toBeTruthy();
+      expect(element?.textContent).toBe('Element with devpilot-id');
+    });
   });
 
   describe('resolveElementsBySelector', () => {
@@ -167,6 +178,17 @@ describe('resolveSelector', () => {
       const elements = resolveElementsBySelector('');
 
       expect(elements).toHaveLength(0);
+    });
+
+    it('should find element by devpilot-id (e-prefixed format)', () => {
+      document.body.innerHTML = `
+        <div data-devpilot-id="e1">Element with devpilot-id</div>
+      `;
+
+      const elements = resolveElementsBySelector('e1');
+
+      expect(elements).toHaveLength(1);
+      expect(elements[0]?.textContent).toBe('Element with devpilot-id');
     });
   });
 
