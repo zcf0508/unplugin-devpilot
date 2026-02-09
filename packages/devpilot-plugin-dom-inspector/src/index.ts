@@ -289,12 +289,14 @@ export default <DevpilotPlugin>{
             clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
             level: z.enum(['all', 'error', 'warn', 'info', 'debug']).optional().default('all').describe('Log level filter'),
             limit: z.number().optional().default(100).describe('Maximum number of logs to return'),
+            keyword: z.string().optional().describe('Keyword to filter logs (case-insensitive substring match)'),
+            regex: z.string().optional().describe('Regex pattern to filter logs (applied after keyword filter)'),
           }),
         },
         async (params) => {
-          const { clientId, level, limit } = params;
+          const { clientId, level, limit, keyword, regex } = params;
           const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.getLogs({ level, limit });
+            return await client.rpc.getLogs({ level, limit, keyword, regex });
           });
           return toMcpResponse(result);
         },

@@ -38,7 +38,7 @@ describe('mCP Tools - Node Side', () => {
     const toolCalls = [
       { tool: 'query_selector', args: { selector: '.test', clientId: 'c_1' }, mock: mockClient.rpc.querySelector, isJson: true },
       { tool: 'get_dom_tree', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getDOMTree, isJson: true },
-      { tool: 'get_logs', args: { clientId: 'c_1', level: 'all' }, mock: mockClient.rpc.getLogs, isJson: true },
+      { tool: 'get_logs', args: { clientId: 'c_1', level: 'all', keyword: 'test', regex: '.*' }, mock: mockClient.rpc.getLogs, isJson: true },
       { tool: 'get_layout', args: { clientId: 'c_1', maxDepth: 15 }, mock: mockClient.rpc.getLayout, isJson: false },
       { tool: 'get_compact_snapshot', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getCompactSnapshot, isJson: false },
     ];

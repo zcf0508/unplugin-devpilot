@@ -100,15 +100,53 @@ function captureConsoleLogs() {
 captureConsoleLogs();
 
 export async function getLogs(
-  options?: { level?: 'all' | 'error' | 'warn' | 'info' | 'debug', limit?: number },
+  options?: {
+    level?: 'all' | 'error' | 'warn' | 'info' | 'debug'
+    limit?: number
+    keyword?: string
+    regex?: string
+  },
 ): Promise<GetLogsResult> {
   try {
-    const { level = 'all', limit = 100 } = options || {};
+    const { level = 'all', limit = 100, keyword, regex } = options || {};
 
     // Filter logs by level
     let filteredLogs = capturedLogs;
     if (level !== 'all') {
       filteredLogs = capturedLogs.filter(log => log.level === level);
+    }
+
+    // Filter by keyword (case-insensitive substring match)
+    if (keyword) {
+      const lowerKeyword = keyword.toLowerCase();
+      filteredLogs = filteredLogs.filter(log =>
+        log.message.toLowerCase().includes(lowerKeyword),
+      );
+    }
+
+    // Filter by regex pattern
+    if (regex) {
+      try {
+        const regexPattern = new RegExp(regex);
+        filteredLogs = filteredLogs.filter(log =>
+          regexPattern.test(log.message),
+        );
+      }
+      catch (e) {
+        // Invalid regex pattern - return empty result with error
+        return {
+          success: false,
+          error: `Invalid regex pattern: ${e instanceof Error
+            ? e.message
+            : String(e)}`,
+          logs: [],
+          total: capturedLogs.length,
+          filtered: 0,
+          level,
+          keyword,
+          regex,
+        };
+      }
     }
 
     // Apply limit
@@ -120,6 +158,8 @@ export async function getLogs(
       total: capturedLogs.length,
       filtered: limitedLogs.length,
       level,
+      keyword,
+      regex,
     };
   }
   catch (error) {
@@ -132,6 +172,16 @@ export async function getLogs(
       total: 0,
       filtered: 0,
       level: options?.level || 'all',
+      keyword: options?.keyword,
+      regex: options?.regex,
     };
   }
+}
+
+/**
+ * Clear all captured logs
+ * This is useful for testing purposes
+ */
+export function clearLogs(): void {
+  capturedLogs.length = 0;
 }

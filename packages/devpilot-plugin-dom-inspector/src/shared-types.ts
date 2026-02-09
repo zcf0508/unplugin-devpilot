@@ -72,6 +72,8 @@ export interface GetLogsResult {
   total: number
   filtered: number
   level: string
+  keyword?: string
+  regex?: string
   error?: string
 }
 
@@ -142,5 +144,10 @@ export interface DomInspectorRpc {
    */
   querySelector: (selector: string, maxDepth?: number) => Promise<QuerySelectorResult>
   getDOMTree: (maxDepth?: number) => Promise<GetDOMTreeResult>
-  getLogs: (options?: { level?: 'all' | 'error' | 'warn' | 'info' | 'debug', limit?: number }) => Promise<GetLogsResult>
+  getLogs: (options?: {
+    level?: 'all' | 'error' | 'warn' | 'info' | 'debug'
+    limit?: number
+    keyword?: string
+    regex?: string
+  }) => Promise<GetLogsResult>
 }
