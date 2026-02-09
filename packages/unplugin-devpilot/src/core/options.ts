@@ -23,15 +23,44 @@ export interface DevpilotPlugin {
    */
   serverSetup?: (ctx: DevpilotPluginContext) => Record<string, (...args: any[]) => any>
   mcpSetup?: (ctx: DevpilotPluginContext) => Array<McpServerRegister>
+  /**
+   * The skill module path to be injected
+   * - npm package path: 'my-plugin/skill'
+   * - absolute path: '/path/to/skill.md'
+   *
+   * Note: relative paths need to be resolved to absolute paths first
+   * @example
+   * ```ts
+   * import { resolveSkillModule } from 'unplugin-devpilot'
+   *
+   * skillModule: resolveSkillModule(import.meta.url, './skill.md')
+   * ```
+   */
+  skillModule?: string | ((ctx: DevpilotPluginContext) => string)
 }
 
 export interface Options {
   wsPort?: number
   mcpPort?: number
   plugins?: DevpilotPlugin[]
+  /**
+   * The path to generate the core skill file
+   * - directory path: './src/skills/devpilot' (will generate SKILL.md in this directory)
+   * - file path: './src/skills/devpilot/SKILL.md' (will generate the specified file)
+   *
+   * If not specified, no core skill file will be generated
+   * @example
+   * ```ts
+   * Devpilot({
+   *   skillCorePath: './src/skills/devpilot',
+   *   plugins: [],
+   * })
+   * ```
+   */
+  skillCorePath?: string
 }
 
-export type OptionsResolved = Required<Options>;
+export type OptionsResolved = Required<Omit<Options, 'skillCorePath'>> & Pick<Options, 'skillCorePath'>;
 
 export async function resolveOptions(options: Options): Promise<OptionsResolved> {
   // wsPort: use specified port if available, otherwise randomly allocate
@@ -64,5 +93,6 @@ export async function resolveOptions(options: Options): Promise<OptionsResolved>
     wsPort,
     mcpPort: preferredMcpPort,
     plugins: options.plugins || [],
+    skillCorePath: options.skillCorePath,
   };
 }

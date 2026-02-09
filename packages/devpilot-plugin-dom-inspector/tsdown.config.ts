@@ -15,5 +15,11 @@ export default defineConfig([
     ],
     outDir: 'dist/client',
     inlineOnly: false,
+    hooks: {
+      'build:done': () => {
+        mkdirSync('dist', { recursive: true });
+        copyFileSync('src/skill.md', 'dist/skill.md');
+      },
+    },
   },
 ]);

@@ -4,6 +4,7 @@ import process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
+import { generateCoreSkill } from './core/skill-generator';
 import { killPort } from './core/utils';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
@@ -76,6 +77,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       registerPluginMcpRegisterMethods(resolvedOptions.plugins);
       startWebSocketServer(resolvedOptions.wsPort);
       await startMcpServer(resolvedOptions.mcpPort);
+      // Generate core skill file
+      await generateCoreSkill(resolvedOptions, process.env.NODE_ENV !== 'production');
     }
 
     async function stopServers() {
@@ -85,6 +88,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       stopWebSocketServer();
       stopMcpServer();
       await killPort(resolvedOptions.mcpPort);
+      // Clean up core skill file
+      await generateCoreSkill(resolvedOptions, false);
     }
 
     return {
@@ -154,4 +159,6 @@ export type { DevpilotPlugin, Options } from './core/options';
 export type { DevpilotPluginContext } from './core/plugin';
 export { defineMcpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
+export { resolveSkillModule } from './core/skill-generator';
 export * from './core/types';
+export { resolveModule } from './core/utils';

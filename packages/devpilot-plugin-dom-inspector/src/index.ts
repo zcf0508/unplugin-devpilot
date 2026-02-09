@@ -358,4 +358,5 @@ export default <DevpilotPlugin>{
 
     return tools;
   },
+  skillModule: resolveClientModule(import.meta.url, './skill.md'),
 };

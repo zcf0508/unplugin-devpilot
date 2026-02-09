@@ -1,0 +1,522 @@
+import type { OptionsResolved } from '../src/core/options';
+import { promises as fs } from 'node:fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { generateCoreSkill, getAllSkillPaths, resolveSkillModule } from '../src/core/skill-generator';
+
+// Mock fs module
+vi.mock('node:fs', () => ({
+  promises: {
+    mkdir: vi.fn(),
+    writeFile: vi.fn(),
+    unlink: vi.fn(),
+    readFile: vi.fn(),
+  },
+}));
+
+describe('skill-generator', () => {
+  describe('resolveSkillModule', () => {
+    it('should resolve skill module path correctly', () => {
+      const importMetaUrl = 'file:///path/to/plugin/index.ts';
+      const relativePath = './skill.md';
+
+      const result = resolveSkillModule(importMetaUrl, relativePath);
+
+      expect(result).toMatchInlineSnapshot(
+        '"file:///path/to/plugin/skill.md"',
+      );
+    });
+
+    it('should handle nested paths', () => {
+      const importMetaUrl = 'file:///path/to/plugin/index.ts';
+      const relativePath = './skills/custom.md';
+
+      const result = resolveSkillModule(importMetaUrl, relativePath);
+
+      expect(result).toMatchInlineSnapshot(
+        '"file:///path/to/plugin/skills/custom.md"',
+      );
+    });
+
+    it('should handle parent directory paths', () => {
+      const importMetaUrl = 'file:///path/to/plugin/index.ts';
+      const relativePath = '../skill.md';
+
+      const result = resolveSkillModule(importMetaUrl, relativePath);
+
+      expect(result).toMatchInlineSnapshot(
+        '"file:///path/to/skill.md"',
+      );
+    });
+  });
+
+  describe('generateCoreSkill', () => {
+    let mockOptions: OptionsResolved;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockOptions = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: '/test/skills/core.md',
+      };
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should not generate skill file when skillCorePath is not configured', async () => {
+      const optionsWithoutSkillPath: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: undefined,
+      };
+
+      await generateCoreSkill(optionsWithoutSkillPath, true);
+
+      expect(fs.mkdir).not.toHaveBeenCalled();
+      expect(fs.writeFile).not.toHaveBeenCalled();
+      expect(fs.unlink).not.toHaveBeenCalled();
+    });
+
+    it('should generate SKILL.md when skillCorePath is a directory', async () => {
+      const optionsWithDirectory: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: '/test/skills/devpilot',
+      };
+
+      await generateCoreSkill(optionsWithDirectory, true);
+
+      expect(fs.mkdir).toHaveBeenCalledWith('/test/skills/devpilot', { recursive: true });
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCall = (fs.writeFile as any).mock.calls[0];
+      expect(writeFileCall[0]).toBe('/test/skills/devpilot/SKILL.md');
+    });
+
+    it('should copy plugin skill files to directory when skillCorePath is a directory', async () => {
+      const mockPlugin = {
+        namespace: 'builtin-dom-inspector',
+        skillModule: 'file:///test/plugin/skill.md',
+      };
+
+      const optionsWithDirectory: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [mockPlugin as any],
+        skillCorePath: '/test/skills/devpilot',
+      };
+
+      // Mock readFile to return skill content
+      (fs.readFile as any).mockResolvedValue('# DOM Inspector Skill\n\nThis is a DOM inspector skill.');
+
+      await generateCoreSkill(optionsWithDirectory, true);
+
+      expect(fs.mkdir).toHaveBeenCalledWith('/test/skills/devpilot', { recursive: true });
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCalls = (fs.writeFile as any).mock.calls;
+      expect(writeFileCalls.length).toBe(2);
+
+      // First call should be the plugin skill file (copied to directory)
+      expect(writeFileCalls[0][0]).toBe('/test/skills/devpilot/builtin-dom-inspector.md');
+      expect(writeFileCalls[0][1]).toBe('# DOM Inspector Skill\n\nThis is a DOM inspector skill.');
+
+      // Second call should be the core skill file (SKILL.md)
+      expect(writeFileCalls[1][0]).toBe('/test/skills/devpilot/SKILL.md');
+      expect(writeFileCalls[1][1]).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        - [builtin-dom-inspector](./builtin-dom-inspector.md) - builtin-dom-inspector capabilities
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/devpilot
+        - **Plugins**: 1
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+
+    it('should not generate skill file in production mode', async () => {
+      await generateCoreSkill(mockOptions, false);
+
+      expect(fs.mkdir).not.toHaveBeenCalled();
+      expect(fs.writeFile).not.toHaveBeenCalled();
+      expect(fs.unlink).toHaveBeenCalled();
+    });
+
+    it('should generate skill file in development mode', async () => {
+      const mockPlugin = {
+        namespace: 'test-plugin',
+        skillModule: 'file:///test/plugin/skill.md',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      // Mock readFile to return skill content
+      (fs.readFile as any).mockResolvedValue('# Test Plugin Skill\n\nThis is a test plugin skill.');
+
+      await generateCoreSkill(mockOptions, true);
+
+      expect(fs.mkdir).toHaveBeenCalledWith('/test/skills', { recursive: true });
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      // Check that the plugin skill file was copied and core skill file was written
+      const writeFileCalls = (fs.writeFile as any).mock.calls;
+      expect(writeFileCalls.length).toBe(2);
+
+      // First call should be the plugin skill file
+      expect(writeFileCalls[0][0]).toBe('/test/skills/test-plugin.md');
+      expect(writeFileCalls[0][1]).toBe('# Test Plugin Skill\n\nThis is a test plugin skill.');
+
+      // Second call should be the core skill file
+      expect(writeFileCalls[1][0]).toBe('/test/skills/core.md');
+      expect(writeFileCalls[1][1]).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        - [test-plugin](./test-plugin.md) - test-plugin capabilities
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/core.md
+        - **Plugins**: 1
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+
+    it('should handle plugin with npm package skill path', async () => {
+      const mockPlugin = {
+        namespace: 'npm-plugin',
+        skillModule: 'npm:my-plugin/skill.md',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      await generateCoreSkill(mockOptions, true);
+
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCall = (fs.writeFile as any).mock.calls[0];
+      expect(writeFileCall[1]).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        - [npm-plugin](npm:my-plugin/skill.md) - npm-plugin capabilities
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/core.md
+        - **Plugins**: 1
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+
+    it('should handle plugin with relative skill path', async () => {
+      const mockPlugin = {
+        namespace: 'relative-plugin',
+        skillModule: './skill.md',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      await generateCoreSkill(mockOptions, true);
+
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCall = (fs.writeFile as any).mock.calls[0];
+      expect(writeFileCall[1]).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        - [relative-plugin](./relative-plugin.md) - relative-plugin capabilities
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/core.md
+        - **Plugins**: 1
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+
+    it('should handle multiple plugins', async () => {
+      const mockPlugins = [
+        { namespace: 'plugin-a', skillModule: 'file:///test/plugin-a/skill.md' },
+        { namespace: 'plugin-b', skillModule: 'file:///test/plugin-b/skill.md' },
+      ];
+
+      mockOptions.plugins = mockPlugins as any;
+
+      // Mock readFile to return skill content
+      (fs.readFile as any).mockResolvedValue('# Plugin Skill\n\nThis is a plugin skill.');
+
+      await generateCoreSkill(mockOptions, true);
+
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCalls = (fs.writeFile as any).mock.calls;
+      expect(writeFileCalls.length).toBe(3); // 2 plugin files + 1 core file
+
+      // Check that the plugin skill files were copied
+      expect(writeFileCalls[0][0]).toBe('/test/skills/plugin-a.md');
+      expect(writeFileCalls[1][0]).toBe('/test/skills/plugin-b.md');
+
+      // Check that the core skill file was written
+      const content = writeFileCalls[2][1];
+      expect(content).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        - [plugin-a](./plugin-a.md) - plugin-a capabilities
+        - [plugin-b](./plugin-b.md) - plugin-b capabilities
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/core.md
+        - **Plugins**: 2
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+
+    it('should handle no plugins configured', async () => {
+      mockOptions.plugins = [];
+
+      await generateCoreSkill(mockOptions, true);
+
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      const writeFileCall = (fs.writeFile as any).mock.calls[0];
+      expect(writeFileCall[1]).toMatchInlineSnapshot(`
+        "# Devpilot Core Skills
+
+        This is the core skill file that aggregates all plugin skills.
+
+        ## Available Skills
+
+        No plugin skills configured
+
+        ## Usage
+
+        These skills can be used with Claude Agent to interact with web applications.
+
+        ## Configuration
+
+        - **Core Skill Path**: /test/skills/core.md
+        - **Plugins**: 0
+        - **WebSocket Port**: 3100
+        - **MCP Port**: 3101
+        "
+      `);
+    });
+  });
+
+  describe('getAllSkillPaths', () => {
+    it('should return empty array when no skills configured', () => {
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: undefined,
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return core skill path when configured', () => {
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toEqual([
+        { type: 'file', path: '/test/skills/core.md' },
+      ]);
+    });
+
+    it('should return SKILL.md path when skillCorePath is a directory', () => {
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: [],
+        skillCorePath: '/test/skills/devpilot',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toEqual([
+        { type: 'file', path: '/test/skills/devpilot/SKILL.md' },
+      ]);
+    });
+
+    it('should return plugin skill paths with correct types', () => {
+      const mockPlugins = [
+        { namespace: 'plugin-a', skillModule: 'file:///test/plugin-a/skill.md' },
+        { namespace: 'plugin-b', skillModule: 'npm:my-plugin/skill.md' },
+      ];
+
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: mockPlugins as any,
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toContainEqual({
+        type: 'file',
+        path: '/test/skills/core.md',
+      });
+      expect(result).toContainEqual({
+        type: 'file',
+        path: '/test/skills/plugin-a.md',
+        namespace: 'plugin-a',
+      });
+      expect(result).toContainEqual({
+        type: 'npm',
+        path: 'npm:my-plugin/skill.md',
+        namespace: 'plugin-b',
+      });
+    });
+
+    it('should handle relative skill paths', () => {
+      const mockPlugins = [
+        { namespace: 'relative-plugin', skillModule: './skill.md' },
+      ];
+
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: mockPlugins as any,
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toContainEqual({
+        type: 'relative',
+        path: './skill.md',
+        namespace: 'relative-plugin',
+      });
+    });
+
+    it('should handle scoped npm package paths', () => {
+      const mockPlugins = [
+        { namespace: 'scoped-plugin', skillModule: '@scope/my-plugin/skill.md' },
+      ];
+
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: mockPlugins as any,
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toContainEqual({
+        type: 'npm',
+        path: '@scope/my-plugin/skill.md',
+        namespace: 'scoped-plugin',
+      });
+    });
+
+    it('should handle absolute paths without file:// prefix', () => {
+      const mockPlugins = [
+        { namespace: 'absolute-plugin', skillModule: '/absolute/path/skill.md' },
+      ];
+
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: mockPlugins as any,
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toContainEqual({
+        type: 'file',
+        path: '/absolute/path/skill.md',
+        namespace: 'absolute-plugin',
+      });
+    });
+
+    it('should handle npm package with npm: prefix', () => {
+      const mockPlugins = [
+        { namespace: 'npm-prefix-plugin', skillModule: 'npm:@scope/my-plugin/skill.md' },
+      ];
+
+      const options: OptionsResolved = {
+        wsPort: 3100,
+        mcpPort: 3101,
+        plugins: mockPlugins as any,
+        skillCorePath: '/test/skills/core.md',
+      };
+
+      const result = getAllSkillPaths(options);
+
+      expect(result).toContainEqual({
+        type: 'npm',
+        path: 'npm:@scope/my-plugin/skill.md',
+        namespace: 'npm-prefix-plugin',
+      });
+    });
+  });
+});

@@ -1,5 +1,4 @@
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resolveModule } from '../utils';
 
 export interface DevpilotPluginContext {
   wsPort: number
@@ -23,11 +22,9 @@ export interface DevpilotPluginContext {
  * ```
  */
 export function resolveClientModule(importMetaUrl: string, relativePath: string): string {
-  const __dirname = dirname(fileURLToPath(importMetaUrl));
-  const absolutePath = join(__dirname, relativePath);
-  // Convert to file URL and then to string for proper escaping and import compatibility
-  return pathToFileURL(absolutePath).href;
+  return resolveModule(importMetaUrl, relativePath);
 }
 
+export { resolveModule } from '../utils';
 export type { McpToolRegister as McpServerRegister } from './mcp';
 export { defineMcpToolRegister } from './mcp';
