@@ -52,9 +52,9 @@ export async function resolveOptions(options: Options): Promise<OptionsResolved>
   // mcpPort checks if the specified port (or default 3101) is available
   // If occupied, throw an error
   const preferredMcpPort = options.mcpPort || 3101;
-  const portInUse = await checkPort(preferredMcpPort);
+  const portAvailable = await checkPort(preferredMcpPort);
 
-  if (portInUse !== false) {
+  if (portAvailable === false) {
     throw new Error(
       `MCP port ${preferredMcpPort} is already in use. Please specify a different port or free up the port.`,
     );

@@ -4,6 +4,7 @@ import process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
+import { killPort } from './core/utils';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
@@ -77,11 +78,13 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       await startMcpServer(resolvedOptions.mcpPort);
     }
 
-    function stopServers() {
+    async function stopServers() {
       if (!serversStarted) { return; }
+      const resolvedOptions = await ensureOptionsResolved();
       serversStarted = false;
       stopWebSocketServer();
       stopMcpServer();
+      await killPort(resolvedOptions.mcpPort);
     }
 
     return {
