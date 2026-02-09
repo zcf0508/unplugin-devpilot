@@ -43,24 +43,7 @@
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
   "editor.defaultFormatter": "dbaeumer.vscode-eslint",
-  "[css]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[less]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[sass]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "vue.inlayHints.optionsWrapper": true,
-  "vue.server.hybridMode": true,
-  "[vue]": {
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  },
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
@@ -69,5 +52,7 @@
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  }
+  },
+
+  "typescript.experimental.useTsgo": true
 }

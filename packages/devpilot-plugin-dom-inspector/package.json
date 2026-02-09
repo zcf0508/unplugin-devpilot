@@ -31,8 +31,8 @@
     "test-node": "vitest --config vitest-node.config.ts --run --silent",
     "test-client": "vitest --run --silent",
     "test": "concurrently --names client,node -c blue,yellow \"pnpm:test-client\" \"pnpm:test-node\"",
-    "typecheck:client": "tsc --project tsconfig.client.json --noEmit",
-    "typecheck:node": "tsc --noEmit",
+    "typecheck:client": "tsgo --project tsconfig.client.json --noEmit",
+    "typecheck:node": "tsgo --noEmit",
     "typecheck": "pnpm run typecheck:client && pnpm run typecheck:node",
     "prepublishOnly": "pnpm run build"
   },

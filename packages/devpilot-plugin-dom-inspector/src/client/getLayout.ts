@@ -150,7 +150,7 @@ function formatLayoutForLLM(
     layoutText += '2. **Identify the layer you need** - e.g., level1 for base layer, level2 for modal overlay\n';
     layoutText += '3. **Execute actions** - Use click_element_by_id() or input_text_by_id() with element @id\n\n';
     layoutText += '## Example Workflow\n\n';
-    layoutText += '```typescript\n';
+    layoutText += '```\n';
     layoutText += '// 1. Get layout overview (shows visual layers, not DOM depth)\n';
     layoutText += 'const layout = await get_layout({ id: "e10", maxDepth: 15 });\n';
     layoutText += '// Result: 3 visual layers covering element @e10\n';

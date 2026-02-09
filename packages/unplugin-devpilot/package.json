@@ -56,8 +56,8 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest --run",
-    "typecheck:client": "tsc --project tsconfig.client.json --noEmit",
-    "typecheck:node": "tsc --noEmit",
+    "typecheck:client": "tsgo --project tsconfig.client.json --noEmit",
+    "typecheck:node": "tsgo --noEmit",
     "typecheck": "pnpm run typecheck:client && pnpm run typecheck:node",
     "prepublishOnly": "pnpm run build"
   },

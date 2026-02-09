@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "kravets.vscode-publint",
+    "dbaeumer.vscode-eslint",
+    "typescriptteam.native-preview"
+  ]
+}
