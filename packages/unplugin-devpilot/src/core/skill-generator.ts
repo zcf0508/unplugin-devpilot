@@ -151,30 +151,46 @@ These skills can be used with Claude Agent to interact with web applications.
  * Generate and write the core skill files to all configured paths
  */
 export async function generateCoreSkill(options: OptionsResolved, isDev: boolean): Promise<void> {
-  // Only generate if skillPaths is configured
   if (!options.skillPaths || options.skillPaths.length === 0) {
     return;
   }
 
   const content = generateCoreSkillContent(options, isDev);
+  const pluginSkills = getPluginSkillModules(options.plugins, options);
 
-  // Process each configured path
   for (const skillPath of options.skillPaths) {
-    // Get the actual file path (handle directory paths)
     const skillFilePath = getCoreSkillFilePath(skillPath);
+    const dir = dirname(skillFilePath);
 
-    // If in non-dev mode or no content, ensure file doesn't exist or is empty
     if (!isDev || !content) {
+      for (const skill of pluginSkills) {
+        if (skill.originalSkillModule.startsWith('file://')) {
+          try {
+            await fs.unlink(join(dir, `${skill.namespace}.md`));
+          }
+          catch {
+            // File doesn't exist
+          }
+        }
+      }
       try {
         await fs.unlink(skillFilePath);
       }
       catch {
-        // File doesn't exist, which is fine
+        // File doesn't exist
       }
       continue;
     }
 
-    // Check if file exists and content has changed
+    await fs.mkdir(dir, { recursive: true });
+    await fs.chmod(dir, 0o777);
+
+    for (const skill of pluginSkills) {
+      if (skill.originalSkillModule.startsWith('file://')) {
+        await copyPluginSkillFile(skill.path, join(dir, `${skill.namespace}.md`));
+      }
+    }
+
     let existingContent: string | undefined;
     try {
       existingContent = await fs.readFile(skillFilePath, 'utf-8');
@@ -183,36 +199,55 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
       // File doesn't exist
     }
 
-    // Only write if content has changed
-    if (existingContent === content) {
-      continue;
+    if (existingContent !== content) {
+      await fs.writeFile(skillFilePath, content, 'utf-8');
+      await fs.chmod(skillFilePath, 0o777);
     }
 
-    // Ensure the directory exists
-    const dir = dirname(skillFilePath);
-    await fs.mkdir(dir, { recursive: true });
+    await setPermissionsRecursive(dir).catch(() => {
+      // Ignore permission errors
+    });
+  }
+}
 
-    // Copy plugin skill files to the core skill directory
-    const pluginSkills = getPluginSkillModules(options.plugins, options);
-    for (const skill of pluginSkills) {
-      // Only copy file:// paths
-      if (skill.originalSkillModule.startsWith('file://')) {
-        const sourcePath = skill.path;
-        const destPath = join(dir, `${skill.namespace}.md`);
-
-        try {
-          const skillContent = await fs.readFile(sourcePath, 'utf-8');
-          await fs.writeFile(destPath, skillContent, 'utf-8');
-        }
-        catch {
-          // If we can't read the source file, skip copying
-          // The core skill file will still be generated with a link to the original path
-        }
+async function setPermissionsRecursive(dirPath: string): Promise<void> {
+  try {
+    await fs.chmod(dirPath, 0o777);
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        await setPermissionsRecursive(fullPath);
+      }
+      else {
+        await fs.chmod(fullPath, 0o777);
       }
     }
+  }
+  catch {
+    // Ignore permission errors
+  }
+}
 
-    // Write the core skill file
-    await fs.writeFile(skillFilePath, content, 'utf-8');
+async function copyPluginSkillFile(sourcePath: string, destPath: string): Promise<boolean> {
+  try {
+    const skillContent = await fs.readFile(sourcePath, 'utf-8');
+    let existingDest: string | undefined;
+    try {
+      existingDest = await fs.readFile(destPath, 'utf-8');
+    }
+    catch {
+      // File doesn't exist
+    }
+    if (existingDest !== skillContent) {
+      await fs.writeFile(destPath, skillContent, 'utf-8');
+      await fs.chmod(destPath, 0o777);
+      return true;
+    }
+    return false;
+  }
+  catch {
+    return false;
   }
 }
 

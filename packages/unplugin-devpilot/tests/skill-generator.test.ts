@@ -10,6 +10,8 @@ vi.mock('node:fs', () => ({
     writeFile: vi.fn(),
     unlink: vi.fn(),
     readFile: vi.fn(),
+    chmod: vi.fn(),
+    readdir: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -54,6 +56,7 @@ describe('skill-generator', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
+      (fs.readdir as any).mockResolvedValue([]);
       mockOptions = {
         wsPort: 3100,
         mcpPort: 3101,
@@ -111,8 +114,13 @@ describe('skill-generator', () => {
         skillPaths: ['/test/skills/devpilot'],
       };
 
-      // Mock readFile to return skill content
-      (fs.readFile as any).mockResolvedValue('# DOM Inspector Skill\n\nThis is a DOM inspector skill.');
+      const skillContent = '# DOM Inspector Skill\n\nThis is a DOM inspector skill.';
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skill.md') {
+          return Promise.resolve(skillContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
 
       await generateCoreSkill(optionsWithDirectory, true);
 
@@ -124,7 +132,7 @@ describe('skill-generator', () => {
 
       // First call should be the plugin skill file (copied to directory)
       expect(writeFileCalls[0][0]).toBe('/test/skills/devpilot/builtin-dom-inspector.md');
-      expect(writeFileCalls[0][1]).toBe('# DOM Inspector Skill\n\nThis is a DOM inspector skill.');
+      expect(writeFileCalls[0][1]).toBe(skillContent);
 
       // Second call should be the core skill file (SKILL.md)
       expect(writeFileCalls[1][0]).toBe('/test/skills/devpilot/SKILL.md');
@@ -166,8 +174,13 @@ describe('skill-generator', () => {
 
       mockOptions.plugins = [mockPlugin as any];
 
-      // Mock readFile to return skill content
-      (fs.readFile as any).mockResolvedValue('# Test Plugin Skill\n\nThis is a test plugin skill.');
+      const skillContent = '# Test Plugin Skill\n\nThis is a test plugin skill.';
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skill.md') {
+          return Promise.resolve(skillContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
 
       await generateCoreSkill(mockOptions, true);
 
@@ -284,8 +297,13 @@ describe('skill-generator', () => {
 
       mockOptions.plugins = mockPlugins as any;
 
-      // Mock readFile to return skill content
-      (fs.readFile as any).mockResolvedValue('# Plugin Skill\n\nThis is a plugin skill.');
+      const skillContent = '# Plugin Skill\n\nThis is a plugin skill.';
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin-a/skill.md' || path === '/test/plugin-b/skill.md') {
+          return Promise.resolve(skillContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
 
       await generateCoreSkill(mockOptions, true);
 
