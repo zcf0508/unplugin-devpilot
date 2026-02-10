@@ -6,10 +6,10 @@ import { getCompactSnapshot } from './getCompactSnapshot';
 import { getDOMTree } from './getDOMTree';
 import { getElementInfoById } from './getElementInfoById';
 import { getLayout } from './getLayout';
-import { getLogs } from './getLogs';
 import { inputTextById } from './inputTextById';
 import { querySelector } from './querySelector';
 import { scrollToElement } from './scrollToElement';
+import './getLogs';
 
 export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   // Compact snapshot - agent-browser style format
@@ -29,8 +29,6 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   querySelector,
 
   getDOMTree,
-
-  getLogs,
 
   // Get layout hierarchy based on visual coverage
   getLayout: async (

@@ -12,7 +12,6 @@ describe('mCP Tools - Node Side', () => {
       rpc: {
         querySelector: vi.fn().mockResolvedValue({ success: true, matchedCount: 1, elements: [] }),
         getDOMTree: vi.fn().mockResolvedValue({ success: true, tree: { devpilotId: 'root', role: 'document', name: null } }),
-        getLogs: vi.fn().mockResolvedValue({ success: true, logs: [], total: 0, filtered: 0, level: 'all' }),
         getLayout: vi.fn().mockResolvedValue({
           success: true,
           targetId: 'body',
@@ -69,7 +68,6 @@ describe('mCP Tools - Node Side', () => {
       rpc: {
         querySelector: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getDOMTree: vi.fn().mockRejectedValue(new Error('RPC failed')),
-        getLogs: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getLayout: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getCompactSnapshot: vi.fn().mockRejectedValue(new Error('RPC failed')),
       },

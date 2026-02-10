@@ -1,5 +1,5 @@
 import type { DevpilotPlugin } from 'unplugin-devpilot';
-import type { ConsoleLogEntry, DomInspectorRpc } from './shared-types';
+import type { ConsoleLogEntry, DomInspectorRpc, DomInspectorServerMethods } from './shared-types';
 import { clientManager, defineMcpToolRegister, resolveClientModule } from 'unplugin-devpilot';
 import { z } from 'zod';
 
@@ -133,9 +133,18 @@ function toMcpResponse<T>(result: RpcResult<T>): { content: Array<{ type: 'text'
 export default <DevpilotPlugin>{
   namespace: 'builtin-dom-inspector',
   clientModule: resolveClientModule(import.meta.url, './client/index.mjs'),
-  serverSetup(ctx) {
-    // Server-side setup if needed
-    return {};
+  serverSetup(ctx): DomInspectorServerMethods {
+    const MAX_STORAGE_SIZE = 1000;
+    return {
+      async appendLogs(items) {
+        const existing = await ctx.storage.getItem<ConsoleLogEntry[]>('logs') || [];
+        const merged = [...existing, ...items];
+        const trimmed = merged.length > MAX_STORAGE_SIZE
+          ? merged.slice(-MAX_STORAGE_SIZE)
+          : merged;
+        await ctx.storage.setItem('logs', trimmed);
+      },
+    };
   },
   mcpSetup(ctx) {
     const tools = [

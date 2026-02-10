@@ -144,10 +144,8 @@ export interface DomInspectorRpc {
    */
   querySelector: (selector: string, maxDepth?: number) => Promise<QuerySelectorResult>
   getDOMTree: (maxDepth?: number) => Promise<GetDOMTreeResult>
-  getLogs: (options?: {
-    level?: 'all' | 'error' | 'warn' | 'info' | 'debug'
-    limit?: number
-    keyword?: string
-    regex?: string
-  }) => Promise<GetLogsResult>
+}
+
+export interface DomInspectorServerMethods extends Record<string, (...args: any[]) => any> {
+  appendLogs: (items: ConsoleLogEntry[]) => Promise<void>
 }
