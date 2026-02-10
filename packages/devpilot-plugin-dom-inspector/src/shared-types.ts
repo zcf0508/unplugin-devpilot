@@ -98,6 +98,25 @@ export interface GetLayoutResult {
   timestamp?: number
 }
 
+export interface ScreenshotResult {
+  success: boolean
+  timestamp: number
+  url: string
+  title: string
+  // Base64-encoded image data (without data URL prefix)
+  data?: string
+  mimeType?: string
+  format?: 'png' | 'jpeg' | 'webp'
+  dimensions?: {
+    width: number
+    height: number
+    scrollWidth: number
+    scrollHeight: number
+  }
+  selector?: string
+  error?: string
+}
+
 export interface DomInspectorRpc {
   // Compact snapshot (agent-browser style)
   /**
@@ -136,6 +155,20 @@ export interface DomInspectorRpc {
    * @param behavior - Scroll behavior: 'smooth' (default) or 'auto'
    */
   scrollToElement: (id: string, behavior?: 'smooth' | 'auto') => Promise<ElementActionResult>
+
+  /**
+   * Capture screenshot of page or element
+   * @param options.selector - Element identifier (devpilot-id or CSS selector) to capture. Priority: devpilot-id > CSS selector. If not provided, captures full page or body based on fullPage option
+   * @param options.fullPage - Capture full page (documentElement) instead of just viewport (body). Default: false
+   * @param options.format - Image format: 'png' (default), 'jpeg', or 'webp'
+   * @param options.quality - Image quality for jpeg/webp (0-1). Default: 0.9
+   */
+  captureScreenshot: (options?: {
+    selector?: string
+    fullPage?: boolean
+    format?: 'png' | 'jpeg' | 'webp'
+    quality?: number
+  }) => Promise<ScreenshotResult>
 
   // Legacy methods
   /**

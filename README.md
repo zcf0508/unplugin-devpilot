@@ -115,7 +115,8 @@ Built-in DOM inspection plugin offering:
 - Scroll elements into view
 - Visual layout analysis
 - Browser console log access
-- 9 MCP tools for web automation
+- Page and element screenshot capture
+- 10 MCP tools for web automation
 
 **MCP Tools:**
 - `query_selector` - Query DOM elements with accessibility tree (returns `devpilotId` for use in other APIs)
@@ -127,6 +128,7 @@ Built-in DOM inspection plugin offering:
 - `get_logs` - Access browser logs
 - `get_layout` - Analyze visual layout hierarchy
 - `scroll_to_element` - Scroll element into view (for scrollable containers)
+- `capture_screenshot` - Capture page or element screenshot (cross-origin images without CORS headers may appear blank)
 
 **Element ID Format:** All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). The `query_selector` tool returns `devpilotId` in this format, which can be directly used in other APIs.
 

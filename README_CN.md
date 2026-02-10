@@ -111,7 +111,8 @@ import 'virtual:devpilot-client';
 - 滚动元素到视口
 - 视觉布局分析
 - 浏览器控制台日志访问
-- 9 个用于网页自动化的 MCP 工具
+- 页面和元素截图捕获
+- 10 个用于网页自动化的 MCP 工具
 
 **MCP 工具：**
 - `query_selector` - 查询 DOM 元素（带可访问性树，返回 `devpilotId` 用于其他 API）
@@ -123,6 +124,7 @@ import 'virtual:devpilot-client';
 - `get_logs` - 访问浏览器日志
 - `get_layout` - 分析视觉布局层级
 - `scroll_to_element` - 滚动元素到视口（用于滚动容器）
+- `capture_screenshot` - 捕获页面或元素截图（不带 CORS 头的跨域图片可能显示为空白）
 
 **元素 ID 格式：** 所有元素标识符使用 `e` 前缀格式（如 `e1`, `e2`, `e123`）。`query_selector` 工具返回的 `devpilotId` 采用此格式，可直接用于其他 API。
 

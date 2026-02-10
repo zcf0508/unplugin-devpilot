@@ -37,6 +37,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
+    "@zumer/snapdom": "^2.0.2",
     "unplugin-devpilot": "workspace:*",
     "unstorage": "^1.17.4"
   },

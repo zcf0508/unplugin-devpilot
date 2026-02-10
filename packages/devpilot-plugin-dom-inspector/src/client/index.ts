@@ -1,6 +1,7 @@
 import type { DomInspectorRpc, GetLayoutResult } from '../shared-types';
 import { omit } from 'es-toolkit/compat';
 import { defineRpcHandlers } from 'unplugin-devpilot/client';
+import { captureScreenshot } from './captureScreenshot';
 import { clickElementById } from './clickElementById';
 import { getCompactSnapshot } from './getCompactSnapshot';
 import { getDOMTree } from './getDOMTree';
@@ -39,4 +40,7 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
 
   // Scroll element into view
   scrollToElement,
+
+  // Capture screenshot of page or element
+  captureScreenshot,
 });

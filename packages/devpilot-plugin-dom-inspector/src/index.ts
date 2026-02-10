@@ -414,6 +414,73 @@ export default <DevpilotPlugin>{
           return toMcpResponse(result);
         },
       ),
+
+      // capture_screenshot - 捕获页面或元素截图
+      defineMcpToolRegister(
+        'capture_screenshot',
+        {
+          title: 'Capture Screenshot',
+          description: 'Capture a screenshot of the page or a specific element using SnapDOM. Works with any browser (Chrome, Safari, DingTalk, etc). For best results, keep the browser window visible. Supports devpilot-id (e.g., "e123") or CSS selector to target specific elements.',
+          inputSchema: z.object({
+            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            selector: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to capture. Priority: devpilot-id > CSS selector. If not provided, captures body or full page based on fullPage option'),
+            fullPage: z.boolean().optional().default(false).describe('Capture full page (documentElement) instead of just body. Default: false'),
+            format: z.enum(['png', 'jpeg', 'webp']).optional().default('png').describe('Image format: png (default), jpeg, or webp'),
+            quality: z.number().optional().default(0.9).describe('Image quality for jpeg/webp (0-1). Default: 0.9'),
+          }),
+        },
+        async (params) => {
+          const { clientId, selector, fullPage, format, quality } = params;
+          const result = await handleClientRpc(clientId, async (client) => {
+            return await client.rpc.captureScreenshot({ selector, fullPage, format, quality });
+          });
+
+          // Handle RPC error (client not found, disconnected, etc.)
+          if (!result.success) {
+            return toMcpResponse(result);
+          }
+
+          const screenshotData = result.data;
+
+          // Handle screenshot business logic error (element not found, capture failed, etc.)
+          if (!screenshotData.success) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  error: screenshotData.error || 'Screenshot failed',
+                  url: screenshotData.url,
+                  title: screenshotData.title,
+                }, null, 2),
+              }],
+            };
+          }
+
+          // Return as MCP image content (image + metadata text)
+          // Note: Not using toMcpResponse because we need to return image type
+          return {
+            content: [
+              {
+                type: 'image' as const,
+                mimeType: screenshotData.mimeType || 'image/png',
+                data: screenshotData.data || '',
+              },
+              {
+                type: 'text' as const,
+                text: JSON.stringify({
+                  success: screenshotData.success,
+                  url: screenshotData.url,
+                  title: screenshotData.title,
+                  dimensions: screenshotData.dimensions,
+                  selector: screenshotData.selector,
+                  format: screenshotData.format,
+                  note: 'This is a client-side DOM capture (not a browser-level screenshot). Cross-origin images without CORS headers (Access-Control-Allow-Origin) may appear blank due to browser security restrictions.',
+                }, null, 2),
+              },
+            ],
+          };
+        },
+      ),
     ];
 
     return tools;

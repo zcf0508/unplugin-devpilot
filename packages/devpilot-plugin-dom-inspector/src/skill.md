@@ -10,7 +10,8 @@ allowed-tools: [
   "get_dom_tree",
   "get_logs",
   "get_layout",
-  "scroll_to_element"
+  "scroll_to_element",
+  "capture_screenshot"
 ]
 ---
 
@@ -26,7 +27,8 @@ To efficiently use this skill, follow this strategic workflow:
 2.  **Detailed Identification**: Use `get_compact_snapshot` to get a token-efficient view of the DOM. Look for elements prefixed with `@` (e.g., `@e123`), which are unique `devpilot-id`s.
 3.  **Targeted Refinement**: If you need more details about a specific element, use `get_element_info_by_id` or `query_selector`.
 4.  **Interaction**: Perform actions using `click_element_by_id`, `input_text_by_id`, or `scroll_to_element`. Always prefer using the `devpilot-id` obtained from snapshots.
-5.  **Verification**: After an action, re-run `get_compact_snapshot` to see the updated state or check `get_logs` for any errors triggered in the browser console.
+5.  **Screenshot**: Use `capture_screenshot` to capture the page or a specific element as an image. Note: cross-origin images without CORS headers may appear blank.
+6.  **Verification**: After an action, re-run `get_compact_snapshot` to see the updated state, use `capture_screenshot` for visual verification, or check `get_logs` for any errors triggered in the browser console.
 
 ## Best Practices
 

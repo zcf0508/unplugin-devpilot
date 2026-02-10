@@ -124,7 +124,24 @@ Get browser console logs including errors, warnings, and user logs.
 - Captured console logs with timestamps and stack traces
 - Includes errors, warnings, info, and debug messages
 
-### 9. `scroll_to_element`
+### 9. `capture_screenshot`
+
+Capture a screenshot of the page or a specific element using [SnapDOM](https://github.com/zumerlab/snapdom). Works with any browser (Chrome, Safari, DingTalk, etc).
+
+**Parameters:**
+- `selector` (string, optional): Element identifier (devpilot-id or CSS selector) to capture. Priority: devpilot-id > CSS selector. If not provided, captures body or full page based on `fullPage` option
+- `fullPage` (boolean, optional, default: false): Capture full page (documentElement) instead of just body
+- `format` (enum, optional, default: "png"): Image format - "png", "jpeg", or "webp"
+- `quality` (number, optional, default: 0.9): Image quality for jpeg/webp (0-1)
+- `clientId` (string, optional): Target client ID (defaults to task source client)
+
+**Returns:**
+- Screenshot image data (base64) with metadata (dimensions, URL, title)
+
+**Limitations:**
+- This is a client-side DOM capture, not a browser-level screenshot. Cross-origin images without CORS headers (`Access-Control-Allow-Origin`) may appear blank due to browser security restrictions. This is a limitation of all client-side capture libraries (SnapDOM, html2canvas, dom-to-image, etc.), not specific to this tool.
+
+### 10. `scroll_to_element`
 
 Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport.
 
