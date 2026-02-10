@@ -1,8 +1,8 @@
 import type { DevpilotPluginContext, McpServerRegister } from './plugin';
 import { checkPort, getRandomPort } from 'get-port-please';
 
-export let lastResolvedWsPort: number | undefined;
-export let lastResolvedMcpPort: number | undefined;
+let lastResolvedWsPort: number | undefined;
+let lastResolvedMcpPort: number | undefined;
 
 export function resetLastResolvedPorts(): void {
   lastResolvedWsPort = undefined;
