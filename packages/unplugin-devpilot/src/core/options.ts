@@ -52,23 +52,23 @@ export interface Options {
   mcpPort?: number
   plugins?: DevpilotPlugin[]
   /**
-   * The path to generate the core skill file
-   * - directory path: './src/skills/devpilot' (will generate SKILL.md in this directory)
-   * - file path: './src/skills/devpilot/SKILL.md' (will generate the specified file)
+   * The paths to generate the core skill files
+   * - directory path: './.github/skills/devpilot' (will generate SKILL.md in this directory)
+   * - file path: './.github/skills/devpilot/SKILL.md' (will generate the specified file)
    *
    * If not specified, no core skill file will be generated
    * @example
    * ```ts
    * Devpilot({
-   *   skillCorePath: './src/skills/devpilot',
+   *   skillPaths: ['./.github/skills/devpilot', './.cursor/skills/devpilot'],
    *   plugins: [],
    * })
    * ```
    */
-  skillCorePath?: string
+  skillPaths?: string[]
 }
 
-export type OptionsResolved = Required<Omit<Options, 'skillCorePath'>> & Pick<Options, 'skillCorePath'>;
+export type OptionsResolved = Required<Omit<Options, 'skillPaths'>> & Pick<Options, 'skillPaths'>;
 
 export async function resolveOptions(options: Options): Promise<OptionsResolved> {
   const wsPort = await resolveWsPort(options.wsPort);
@@ -81,7 +81,7 @@ export async function resolveOptions(options: Options): Promise<OptionsResolved>
     wsPort,
     mcpPort,
     plugins: options.plugins || [],
-    skillCorePath: options.skillCorePath,
+    skillPaths: options.skillPaths || [],
   };
 }
 

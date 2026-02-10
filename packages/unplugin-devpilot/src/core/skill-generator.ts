@@ -1,7 +1,6 @@
 import type { DevpilotPlugin, OptionsResolved } from './options';
 import { promises as fs } from 'node:fs';
-import { dirname, extname, join, resolve } from 'node:path';
-import process from 'node:process';
+import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveModule } from './utils';
 
@@ -141,7 +140,6 @@ These skills can be used with Claude Agent to interact with web applications.
 
 ## Configuration
 
-- **Core Skill Path**: ${options.skillCorePath || 'Not configured'}
 - **Plugins**: ${options.plugins.length}
 - **WebSocket Port**: ${options.wsPort}
 - **MCP Port**: ${options.mcpPort}
@@ -149,69 +147,72 @@ These skills can be used with Claude Agent to interact with web applications.
 }
 
 /**
- * Generate and write the core skill file
+ * Generate and write the core skill files to all configured paths
  */
 export async function generateCoreSkill(options: OptionsResolved, isDev: boolean): Promise<void> {
-  // Only generate if skillCorePath is configured
-  if (!options.skillCorePath) {
+  // Only generate if skillPaths is configured
+  if (!options.skillPaths || options.skillPaths.length === 0) {
     return;
   }
-
-  // Get the actual file path (handle directory paths)
-  const skillFilePath = getCoreSkillFilePath(options.skillCorePath);
 
   const content = generateCoreSkillContent(options, isDev);
 
-  // If in non-dev mode or no content, ensure file doesn't exist or is empty
-  if (!isDev || !content) {
-    try {
-      await fs.unlink(skillFilePath);
-    }
-    catch {
-      // File doesn't exist, which is fine
-    }
-    return;
-  }
+  // Process each configured path
+  for (const skillCorePath of options.skillPaths) {
+    // Get the actual file path (handle directory paths)
+    const skillFilePath = getCoreSkillFilePath(skillCorePath);
 
-  // Check if file exists and content has changed
-  let existingContent: string | undefined;
-  try {
-    existingContent = await fs.readFile(skillFilePath, 'utf-8');
-  }
-  catch {
-    // File doesn't exist
-  }
-
-  // Only write if content has changed
-  if (existingContent === content) {
-    return;
-  }
-
-  // Ensure the directory exists
-  const dir = dirname(skillFilePath);
-  await fs.mkdir(dir, { recursive: true });
-
-  // Copy plugin skill files to the core skill directory
-  const pluginSkills = getPluginSkillModules(options.plugins, options);
-  for (const skill of pluginSkills) {
-    // Only copy file:// paths
-    if (skill.originalSkillModule.startsWith('file://')) {
-      const sourcePath = skill.path;
-      const destPath = join(dir, `${skill.namespace}.md`);
-
+    // If in non-dev mode or no content, ensure file doesn't exist or is empty
+    if (!isDev || !content) {
       try {
-        const skillContent = await fs.readFile(sourcePath, 'utf-8');
-        await fs.writeFile(destPath, skillContent, 'utf-8');
+        await fs.unlink(skillFilePath);
       }
       catch {
-        // If we can't read the source file, skip copying
-        // The core skill file will still be generated with a link to the original path
+        // File doesn't exist, which is fine
+      }
+      continue;
+    }
+
+    // Check if file exists and content has changed
+    let existingContent: string | undefined;
+    try {
+      existingContent = await fs.readFile(skillFilePath, 'utf-8');
+    }
+    catch {
+      // File doesn't exist
+    }
+
+    // Only write if content has changed
+    if (existingContent === content) {
+      continue;
+    }
+
+    // Ensure the directory exists
+    const dir = dirname(skillFilePath);
+    await fs.mkdir(dir, { recursive: true });
+
+    // Copy plugin skill files to the core skill directory
+    const pluginSkills = getPluginSkillModules(options.plugins, options);
+    for (const skill of pluginSkills) {
+      // Only copy file:// paths
+      if (skill.originalSkillModule.startsWith('file://')) {
+        const sourcePath = skill.path;
+        const destPath = join(dir, `${skill.namespace}.md`);
+
+        try {
+          const skillContent = await fs.readFile(sourcePath, 'utf-8');
+          await fs.writeFile(destPath, skillContent, 'utf-8');
+        }
+        catch {
+          // If we can't read the source file, skip copying
+          // The core skill file will still be generated with a link to the original path
+        }
       }
     }
-  }
 
-  // Write the core skill file
-  await fs.writeFile(skillFilePath, content, 'utf-8');
+    // Write the core skill file
+    await fs.writeFile(skillFilePath, content, 'utf-8');
+  }
 }
 
 /**
@@ -224,95 +225,4 @@ export interface SkillPathInfo {
   path: string
   /** The namespace of the plugin (if applicable) */
   namespace?: string
-}
-
-/**
- * Get all skill file paths (core + plugins)
- *
- * This function returns an array of all skill paths with type information,
- * including the core skill file (if configured) and all plugin skill files.
- *
- * @param options - The resolved options containing skillCorePath and plugins
- * @returns Array of skill path information objects
- *
- * @example
- * ```ts
- * import { getAllSkillPaths } from 'unplugin-devpilot/core/skill-generator';
- *
- * const paths = getAllSkillPaths(options);
- * console.log(paths);
- * // [
- * //   { type: 'file', path: '/path/to/core.md' },
- * //   { type: 'file', path: '/path/to/plugin-a.md', namespace: 'plugin-a' },
- * //   { type: 'npm', path: 'npm:my-plugin/skill.md', namespace: 'npm-plugin' }
- * // ]
- * ```
- *
- * @note This function is exported for potential future use, but currently not used internally.
- */
-export function getAllSkillPaths(options: OptionsResolved): SkillPathInfo[] {
-  const paths: SkillPathInfo[] = [];
-
-  // Add core skill path if configured
-  if (options.skillCorePath) {
-    // Get the actual file path (handle directory paths)
-    const skillFilePath = getCoreSkillFilePath(options.skillCorePath);
-    paths.push({
-      type: 'file',
-      path: skillFilePath,
-    });
-  }
-
-  // Get the directory of the core skill file
-  const coreSkillDir = options.skillCorePath
-    ? isDirectoryPath(options.skillCorePath)
-      ? resolve(options.skillCorePath)
-      : dirname(resolve(options.skillCorePath))
-    : process.cwd();
-
-  // Add plugin skill paths
-  const ctx = { wsPort: options.wsPort };
-  options.plugins
-    .filter(p => p.skillModule)
-    .forEach((p) => {
-      const mod = typeof p.skillModule === 'function'
-        ? p.skillModule(ctx)
-        : p.skillModule!;
-
-      // Determine the type based on the original skillModule value
-      let type: SkillPathInfo['type'] = 'file';
-      let path: string;
-
-      if (mod.startsWith('file://')) {
-        // File URL - will be copied to core skill directory
-        type = 'file';
-        path = join(coreSkillDir, `${p.namespace}.md`);
-      }
-      else if (mod.startsWith('npm:')) {
-        type = 'npm';
-        path = mod;
-      }
-      else if (mod.startsWith('.')) {
-        type = 'relative';
-        path = mod;
-      }
-      else if (!mod.startsWith('/') && (mod.includes('/') || mod.match(/^[@a-z0-9]\S+$/i))) {
-        // npm package path (e.g., 'my-plugin/skill.md', '@scope/my-plugin/skill.md')
-        type = 'npm';
-        path = mod;
-      }
-      else {
-        // Absolute path without file:// prefix
-        type = 'file';
-        path = mod;
-      }
-
-      paths.push({
-        type,
-        path,
-        namespace: p.namespace,
-      });
-    });
-
-  return paths;
 }
