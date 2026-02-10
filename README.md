@@ -235,6 +235,80 @@ export default {
 } satisfies DevpilotPlugin;
 ```
 
+### Plugin Storage
+
+Each plugin gets a **namespaced storage** instance (powered by [unstorage](https://github.com/unjs/unstorage)) via `ctx.storage`, available in both `serverSetup` and `mcpSetup`. Storage is isolated per plugin namespace, so plugins won't interfere with each other.
+
+#### Server-side: Reading and Writing
+
+```ts
+export default {
+  // In serverSetup or mcpSetup
+  serverSetup(ctx) {
+    return {
+      async saveData(items: MyData[]) {
+        // Domain-specific logic runs on the server
+        const existing = await ctx.storage.getItem<MyData[]>('key') || [];
+        const merged = [...existing, ...items];
+        await ctx.storage.setItem('key', merged);
+      },
+    };
+  },
+
+  mcpSetup(ctx) {
+    // MCP tools read directly from storage - no browser RPC needed
+    const data = await ctx.storage.getItem<MyData[]>('key') || [];
+  },
+};
+```
+
+#### Client-side: Basic KV via RPC Bridge
+
+The client can use `createClientStorage` for simple key-value operations that bridge to server storage via WebSocket RPC:
+
+```ts
+import { createClientStorage, getDevpilotClient } from 'unplugin-devpilot/client';
+
+const client = getDevpilotClient();
+const storage = createClientStorage(client, 'my-plugin');
+
+await storage.setItem('key', value);
+const data = await storage.getItem<MyType>('key');
+```
+
+#### Client-side: Calling Plugin Server Methods
+
+For domain-specific operations (e.g., incremental append with deduplication), define methods in `serverSetup` and call them from the client via `rpcCall`:
+
+```ts
+// shared-types.ts - Shared type ensures client and server stay in sync
+export interface MyPluginServerMethods extends Record<string, (...args: any[]) => any> {
+  appendData: (items: MyData[]) => Promise<void>
+}
+
+// server (index.ts)
+export default <DevpilotPlugin>{
+  serverSetup(ctx): MyPluginServerMethods {
+    return {
+      async appendData(items) {
+        const existing = await ctx.storage.getItem<MyData[]>('data') || [];
+        await ctx.storage.setItem('data', [...existing, ...items].slice(-500));
+      },
+    };
+  },
+};
+```
+
+```ts
+// client
+import { getDevpilotClient } from 'unplugin-devpilot/client';
+
+const client = getDevpilotClient<MyPluginServerMethods>();
+client.rpcCall('appendData', batch);
+```
+
+This pattern keeps domain logic on the server, minimizes RPC payload, and maintains type safety across both sides.
+
 ## Development
 
 ### Prerequisites

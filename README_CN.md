@@ -232,6 +232,80 @@ export default {
 } satisfies DevpilotPlugin;
 ```
 
+### 插件存储
+
+每个插件通过 `ctx.storage` 获得一个**命名空间隔离的存储**实例（基于 [unstorage](https://github.com/unjs/unstorage)），在 `serverSetup` 和 `mcpSetup` 中均可使用。各插件的存储互相隔离，不会冲突。
+
+#### 服务端：读写数据
+
+```ts
+export default {
+  // 在 serverSetup 或 mcpSetup 中使用
+  serverSetup(ctx) {
+    return {
+      async saveData(items: MyData[]) {
+      // 领域逻辑在服务端执行
+        const existing = await ctx.storage.getItem<MyData[]>('key') || [];
+        const merged = [...existing, ...items];
+        await ctx.storage.setItem('key', merged);
+      },
+    };
+  },
+
+  mcpSetup(ctx) {
+  // MCP 工具直接从存储读取，无需经过浏览器 RPC
+    const data = await ctx.storage.getItem<MyData[]>('key') || [];
+  },
+};
+```
+
+#### 客户端：通过 RPC 桥接的基础 KV 操作
+
+客户端可使用 `createClientStorage` 进行简单的键值操作，底层通过 WebSocket RPC 桥接到服务端存储：
+
+```ts
+import { createClientStorage, getDevpilotClient } from 'unplugin-devpilot/client';
+
+const client = getDevpilotClient();
+const storage = createClientStorage(client, 'my-plugin');
+
+await storage.setItem('key', value);
+const data = await storage.getItem<MyType>('key');
+```
+
+#### 客户端：调用插件服务端方法
+
+对于领域相关的操作（如增量追加、去重等），应在 `serverSetup` 中定义方法，客户端通过 `rpcCall` 调用：
+
+```ts
+// shared-types.ts - Shared type ensures client and server stay in sync
+export interface MyPluginServerMethods extends Record<string, (...args: any[]) => any> {
+  appendData: (items: MyData[]) => Promise<void>
+}
+
+// server (index.ts)
+export default <DevpilotPlugin>{
+  serverSetup(ctx): MyPluginServerMethods {
+    return {
+      async appendData(items) {
+        const existing = await ctx.storage.getItem<MyData[]>('data') || [];
+        await ctx.storage.setItem('data', [...existing, ...items].slice(-500));
+      },
+    };
+  },
+};
+```
+
+```ts
+// client
+import { getDevpilotClient } from 'unplugin-devpilot/client';
+
+const client = getDevpilotClient<MyPluginServerMethods>();
+client.rpcCall('appendData', batch);
+```
+
+这种模式将领域逻辑保留在服务端，最小化 RPC 负载，并在两端维持类型安全。
+
 ## 开发
 
 ### 前置要求
