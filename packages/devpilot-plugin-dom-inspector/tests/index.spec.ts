@@ -1,4 +1,5 @@
 import { clientManager } from 'unplugin-devpilot/core/client-manager';
+import { createStorage } from 'unstorage';
 import plugin from '../src/index';
 
 vi.mock('unplugin-devpilot/core/client-manager');
@@ -34,11 +35,10 @@ describe('mCP Tools - Node Side', () => {
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
     const toolCalls = [
       { tool: 'query_selector', args: { selector: '.test', clientId: 'c_1' }, mock: mockClient.rpc.querySelector, isJson: true },
       { tool: 'get_dom_tree', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getDOMTree, isJson: true },
-      { tool: 'get_logs', args: { clientId: 'c_1', level: 'all', keyword: 'test', regex: '.*' }, mock: mockClient.rpc.getLogs, isJson: true },
       { tool: 'get_layout', args: { clientId: 'c_1', maxDepth: 15 }, mock: mockClient.rpc.getLayout, isJson: false },
       { tool: 'get_compact_snapshot', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getCompactSnapshot, isJson: false },
     ];
@@ -76,8 +76,8 @@ describe('mCP Tools - Node Side', () => {
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout', 'get_compact_snapshot']) {
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    for (const name of ['query_selector', 'get_dom_tree', 'get_layout', 'get_compact_snapshot']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_1' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('RPC call failed');
@@ -88,8 +88,8 @@ describe('mCP Tools - Node Side', () => {
     vi.mocked(clientManager.getClient).mockReturnValue(undefined);
     vi.mocked(clientManager.getAllClients).mockReturnValue([]);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout', 'get_compact_snapshot']) {
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    for (const name of ['query_selector', 'get_dom_tree', 'get_layout', 'get_compact_snapshot']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_nonexistent' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('not found');
@@ -97,11 +97,64 @@ describe('mCP Tools - Node Side', () => {
   });
 
   it('all tools should handle missing clientId', async () => {
-    const tools = plugin.mcpSetup?.({ wsPort: 3100 }) || [];
-    for (const name of ['query_selector', 'get_dom_tree', 'get_logs', 'get_layout', 'get_compact_snapshot']) {
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    for (const name of ['query_selector', 'get_dom_tree', 'get_layout', 'get_compact_snapshot']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ selector: '.test' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('No client specified');
     }
+  });
+
+  it('get_logs should read from storage and apply filters', async () => {
+    const storage = createStorage();
+    await storage.setItem('logs', [
+      { level: 'error', message: 'Something failed', timestamp: 1000, source: 'console' },
+      { level: 'warn', message: 'Deprecation warning', timestamp: 2000, source: 'console' },
+      { level: 'info', message: 'App started', timestamp: 3000, source: 'console' },
+      { level: 'debug', message: 'Debug info test', timestamp: 4000, source: 'console' },
+      { level: 'error', message: 'Another error test', timestamp: 5000, source: 'console' },
+    ]);
+
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage }) || [];
+    const toolDef = tools.find(t => t().name === 'get_logs');
+
+    const allResult = await toolDef!().cb({ level: 'all', limit: 100 } as any);
+    const allParsed = JSON.parse((allResult.content[0] as { text: string }).text);
+    expect(allParsed.success).toBe(true);
+    expect(allParsed.total).toBe(5);
+    expect(allParsed.filtered).toBe(5);
+
+    const errorResult = await toolDef!().cb({ level: 'error', limit: 100 } as any);
+    const errorParsed = JSON.parse((errorResult.content[0] as { text: string }).text);
+    expect(errorParsed.filtered).toBe(2);
+
+    const keywordResult = await toolDef!().cb({ level: 'all', limit: 100, keyword: 'test' } as any);
+    const keywordParsed = JSON.parse((keywordResult.content[0] as { text: string }).text);
+    expect(keywordParsed.filtered).toBe(2);
+
+    const regexResult = await toolDef!().cb({ level: 'all', limit: 100, regex: '^App' } as any);
+    const regexParsed = JSON.parse((regexResult.content[0] as { text: string }).text);
+    expect(regexParsed.filtered).toBe(1);
+
+    const limitResult = await toolDef!().cb({ level: 'all', limit: 2 } as any);
+    const limitParsed = JSON.parse((limitResult.content[0] as { text: string }).text);
+    expect(limitParsed.filtered).toBe(2);
+    expect(limitParsed.total).toBe(5);
+
+    const invalidRegexResult = await toolDef!().cb({ level: 'all', limit: 100, regex: '[invalid' } as any);
+    const invalidRegexParsed = JSON.parse((invalidRegexResult.content[0] as { text: string }).text);
+    expect(invalidRegexParsed.success).toBe(false);
+  });
+
+  it('get_logs should return empty array when no logs in storage', async () => {
+    const storage = createStorage();
+    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage }) || [];
+    const toolDef = tools.find(t => t().name === 'get_logs');
+
+    const result = await toolDef!().cb({ level: 'all', limit: 100 } as any);
+    const parsed = JSON.parse((result.content[0] as { text: string }).text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.logs).toEqual([]);
+    expect(parsed.total).toBe(0);
   });
 });

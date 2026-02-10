@@ -1,7 +1,9 @@
+import type { Storage } from 'unstorage';
 import { resolveModule } from '../utils';
 
 export interface DevpilotPluginContext {
   wsPort: number
+  storage: Storage
 }
 
 /**

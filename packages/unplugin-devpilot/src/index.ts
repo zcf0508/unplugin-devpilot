@@ -5,16 +5,17 @@ import { createUnplugin } from 'unplugin';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
 import { generateCoreSkill } from './core/skill-generator';
+import { disposeStorage, getPluginStorage } from './core/storage';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0virtual:devpilot-client';
 
 function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResolved): string[] {
-  const ctx = { wsPort: options.wsPort };
   return plugins
     .filter(p => p.clientModule)
     .map((p) => {
+      const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
       const mod = typeof p.clientModule === 'function'
         ? p.clientModule(ctx)
         : p.clientModule!;
@@ -79,6 +80,7 @@ async function stopServers() {
   if (lastOptions) {
     await generateCoreSkill(lastOptions, false);
   }
+  await disposeStorage();
 }
 
 export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
@@ -173,5 +175,6 @@ export type { DevpilotPluginContext } from './core/plugin';
 export { defineMcpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
 export { resolveSkillModule } from './core/skill-generator';
+export { getPluginStorage, storage } from './core/storage';
 export * from './core/types';
 export { resolveModule } from './core/utils';

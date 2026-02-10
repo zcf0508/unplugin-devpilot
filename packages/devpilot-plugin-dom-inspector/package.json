@@ -37,7 +37,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "unplugin-devpilot": "workspace:*"
+    "unplugin-devpilot": "workspace:*",
+    "unstorage": "^1.17.4"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",

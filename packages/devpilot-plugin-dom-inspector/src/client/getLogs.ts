@@ -1,8 +1,29 @@
 import type { ConsoleLogEntry, GetLogsResult } from '../shared-types';
+import { createClientStorage, getDevpilotClient } from 'unplugin-devpilot/client';
 
 // Store captured logs
 const capturedLogs: ConsoleLogEntry[] = [];
 const maxLogBufferSize = 1000;
+
+const NAMESPACE = 'builtin-dom-inspector';
+const STORAGE_KEY = 'logs';
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleSyncToStorage() {
+  if (syncTimer) { return; }
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    syncLogsToStorage();
+  }, 300);
+}
+
+export function syncLogsToStorage(): void {
+  const client = getDevpilotClient();
+  if (!client) { return; }
+  const storage = createClientStorage(client, NAMESPACE);
+  storage.setItem(STORAGE_KEY, [...capturedLogs]).catch(() => {});
+}
 
 // Note: STRUCTURAL_ROLES removed as they were not used in the current implementation
 
@@ -53,6 +74,7 @@ function captureConsoleLogs() {
       }
 
       capturedLogs.push(logEntry);
+      scheduleSyncToStorage();
 
       // Keep buffer size manageable
       if (capturedLogs.length > maxLogBufferSize) {
@@ -71,6 +93,7 @@ function captureConsoleLogs() {
     };
 
     capturedLogs.push(logEntry);
+    scheduleSyncToStorage();
 
     if (capturedLogs.length > maxLogBufferSize) {
       capturedLogs.shift();
@@ -89,6 +112,7 @@ function captureConsoleLogs() {
     };
 
     capturedLogs.push(logEntry);
+    scheduleSyncToStorage();
 
     if (capturedLogs.length > maxLogBufferSize) {
       capturedLogs.shift();
@@ -184,4 +208,5 @@ export async function getLogs(
  */
 export function clearLogs(): void {
   capturedLogs.length = 0;
+  syncLogsToStorage();
 }

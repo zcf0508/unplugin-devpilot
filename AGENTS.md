@@ -5,3 +5,4 @@
 - test cases prefer using `toMatchInlineSnapshot` instead of `toContain`
 - functions should not have circular references and should be relatively independent
 - `typecheck` and `test` need to be run to make sure the changed code works
+- do not use ** Barrel Files **

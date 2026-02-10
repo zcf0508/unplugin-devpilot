@@ -3,6 +3,7 @@ import type { ClientFunctions, ServerFunctions } from './types';
 import { createBirpc } from 'birpc';
 import { WebSocketServer } from 'ws';
 import { clientManager } from './client-manager';
+import { getPluginStorage } from './storage';
 
 let wss: WebSocketServer | null = null;
 
@@ -13,12 +14,12 @@ let pluginServerMethods: Record<string, Record<string, (...args: any[]) => any>>
  * Register plugin server methods
  */
 export function registerPluginServerMethods(plugins: DevpilotPlugin[]): void {
-  const ctx = { wsPort: 0 }; // Will be updated when starting server
   pluginServerMethods = {};
 
   for (const plugin of plugins) {
     if (plugin.serverSetup) {
       try {
+        const ctx = { wsPort: 0, storage: getPluginStorage(plugin.namespace) };
         const methods = plugin.serverSetup(ctx);
         pluginServerMethods[plugin.namespace] = methods;
       }
@@ -51,6 +52,24 @@ export function startWebSocketServer(port: number): WebSocketServer {
       },
       updateClientInfo(info) {
         clientManager.updateClientInfo(clientId, info);
+      },
+      async storageGetItem(namespace: string, key: string) {
+        return getPluginStorage(namespace).getItem(key);
+      },
+      async storageSetItem(namespace: string, key: string, value: any) {
+        await getPluginStorage(namespace).setItem(key, value);
+      },
+      async storageRemoveItem(namespace: string, key: string) {
+        await getPluginStorage(namespace).removeItem(key);
+      },
+      async storageGetKeys(namespace: string, base?: string) {
+        return getPluginStorage(namespace).getKeys(base);
+      },
+      async storageHasItem(namespace: string, key: string) {
+        return getPluginStorage(namespace).hasItem(key);
+      },
+      async storageClear(namespace: string, base?: string) {
+        await getPluginStorage(namespace).clear(base);
       },
       // Inject all plugin methods
       ...allPluginMethods,

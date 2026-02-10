@@ -60,6 +60,12 @@ export interface PendingTask {
 export interface BaseServerFunctions {
   ping: () => string
   updateClientInfo: (info: Omit<ClientInfo, 'clientId' | 'connectedAt' | 'lastActiveAt'>) => void
+  storageGetItem: (namespace: string, key: string) => Promise<any>
+  storageSetItem: (namespace: string, key: string, value: any) => Promise<void>
+  storageRemoveItem: (namespace: string, key: string) => Promise<void>
+  storageGetKeys: (namespace: string, base?: string) => Promise<string[]>
+  storageHasItem: (namespace: string, key: string) => Promise<boolean>
+  storageClear: (namespace: string, base?: string) => Promise<void>
 }
 
 // Default empty interface for plugins to extend via module augmentation

@@ -2,6 +2,7 @@ import type { DevpilotPlugin, OptionsResolved } from './options';
 import { promises as fs } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getPluginStorage } from './storage';
 import { resolveModule } from './utils';
 
 /**
@@ -58,10 +59,10 @@ function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolv
   path: string
   originalSkillModule: string
 }> {
-  const ctx = { wsPort: options.wsPort };
   return plugins
     .filter(p => p.skillModule)
     .map((p) => {
+      const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
       const mod = typeof p.skillModule === 'function'
         ? p.skillModule(ctx)
         : p.skillModule!;

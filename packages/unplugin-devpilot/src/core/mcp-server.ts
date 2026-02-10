@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { version } from '../../package.json';
 import { clientManager } from './client-manager';
+import { getPluginStorage } from './storage';
 
 let httpServer: Server | null = null;
 
@@ -18,12 +19,12 @@ let mcpRegeisterMethods: Record<string, McpServerRegister[]> = {};
  * Register plugin server methods
  */
 export function registerPluginMcpRegisterMethods(plugins: DevpilotPlugin[]): void {
-  const ctx = { wsPort: 0 }; // Will be updated when starting server
   mcpRegeisterMethods = {};
 
   for (const plugin of plugins) {
     if (plugin.mcpSetup) {
       try {
+        const ctx = { wsPort: 0, storage: getPluginStorage(plugin.namespace) };
         const mcps = plugin.mcpSetup(ctx);
         mcpRegeisterMethods[plugin.namespace] = mcps;
       }

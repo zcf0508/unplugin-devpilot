@@ -1,4 +1,5 @@
 import type { DevpilotPlugin } from '../src';
+import { createStorage } from 'unstorage';
 
 // Test plugin interface and types
 describe('plugin Server Methods Extension', () => {
@@ -26,7 +27,7 @@ describe('plugin Server Methods Extension', () => {
       }),
     };
 
-    const methods = plugin.serverSetup?.({ wsPort: 3000 });
+    const methods = plugin.serverSetup?.({ wsPort: 3000, storage: createStorage() });
     expect(methods).toBeDefined();
     expect(typeof methods?.fetchData).toBe('function');
   });
@@ -41,7 +42,7 @@ describe('plugin Server Methods Extension', () => {
       }),
     };
 
-    const methods = plugin.serverSetup?.({ wsPort: 3000 });
+    const methods = plugin.serverSetup?.({ wsPort: 3000, storage: createStorage() });
     expect(Object.keys(methods || {}).length).toBe(3);
   });
 });

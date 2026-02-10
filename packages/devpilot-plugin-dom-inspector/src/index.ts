@@ -1,5 +1,5 @@
 import type { DevpilotPlugin } from 'unplugin-devpilot';
-import type { DomInspectorRpc } from './shared-types';
+import type { ConsoleLogEntry, DomInspectorRpc } from './shared-types';
 import { clientManager, defineMcpToolRegister, resolveClientModule } from 'unplugin-devpilot';
 import { z } from 'zod';
 
@@ -284,9 +284,9 @@ export default <DevpilotPlugin>{
         'get_logs',
         {
           title: 'Get Logs',
-          description: 'Get browser console logs including errors, warnings, and user logs',
+          description: 'Get browser console logs including errors, warnings, and user logs. Reads from unified storage.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().optional().describe('Target client ID (optional, logs are stored centrally)'),
             level: z.enum(['all', 'error', 'warn', 'info', 'debug']).optional().default('all').describe('Log level filter'),
             limit: z.number().optional().default(100).describe('Maximum number of logs to return'),
             keyword: z.string().optional().describe('Keyword to filter logs (case-insensitive substring match)'),
@@ -294,11 +294,62 @@ export default <DevpilotPlugin>{
           }),
         },
         async (params) => {
-          const { clientId, level, limit, keyword, regex } = params;
-          const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.getLogs({ level, limit, keyword, regex });
-          });
-          return toMcpResponse(result);
+          const { level, limit, keyword, regex } = params;
+
+          const allLogs = await ctx.storage.getItem<ConsoleLogEntry[]>('logs') || [];
+
+          let filteredLogs = allLogs;
+          if (level !== 'all') {
+            filteredLogs = filteredLogs.filter(log => log.level === level);
+          }
+          if (keyword) {
+            const lowerKeyword = keyword.toLowerCase();
+            filteredLogs = filteredLogs.filter(log =>
+              log.message.toLowerCase().includes(lowerKeyword),
+            );
+          }
+          if (regex) {
+            try {
+              const regexPattern = new RegExp(regex);
+              filteredLogs = filteredLogs.filter(log => regexPattern.test(log.message));
+            }
+            catch (e) {
+              return {
+                content: [{
+                  type: 'text' as const,
+                  text: JSON.stringify({
+                    success: false,
+                    error: `Invalid regex pattern: ${e instanceof Error
+                      ? e.message
+                      : String(e)}`,
+                    logs: [],
+                    total: allLogs.length,
+                    filtered: 0,
+                    level,
+                    keyword,
+                    regex,
+                  }, null, 2),
+                }],
+              };
+            }
+          }
+
+          const limitedLogs = filteredLogs.slice(-limit);
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                success: true,
+                logs: limitedLogs,
+                total: allLogs.length,
+                filtered: limitedLogs.length,
+                level,
+                keyword,
+                regex,
+              }, null, 2),
+            }],
+          };
         },
       ),
 
