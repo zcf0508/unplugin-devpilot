@@ -1,23 +1,5 @@
-import { exec } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-/**
- * npx free-port :port
- */
-export async function killPort(port: number): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    exec(`npx -y @maxbo/free-port ${port} -s`, (err, stdout, _stderr) => {
-      if (err) {
-        reject(err);
-      }
-      else {
-        console.log(stdout);
-        resolve();
-      }
-    });
-  });
-}
 
 /**
  * Resolve the module path relative to the plugin to an absolute path

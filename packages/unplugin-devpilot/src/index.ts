@@ -5,7 +5,6 @@ import { createUnplugin } from 'unplugin';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
 import { generateCoreSkill } from './core/skill-generator';
-import { killPort } from './core/utils';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
@@ -53,43 +52,44 @@ ${handlerCollection}
 `;
 }
 
+let serversStarted = false;
+let lastOptions: OptionsResolved | null = null;
+
+async function startServers(rawOptions: Options) {
+  const options = await resolveOptions(rawOptions);
+  lastOptions = options;
+  registerPluginServerMethods(options.plugins);
+  registerPluginMcpRegisterMethods(options.plugins);
+  if (!serversStarted) {
+    serversStarted = true;
+    startWebSocketServer(options.wsPort);
+    await startMcpServer(options.mcpPort);
+  }
+  await generateCoreSkill(options, process.env.NODE_ENV !== 'production');
+  return options;
+}
+
+async function stopServers() {
+  if (!serversStarted) { return; }
+  serversStarted = false;
+  await Promise.all([
+    stopWebSocketServer(),
+    stopMcpServer(),
+  ]);
+  if (lastOptions) {
+    await generateCoreSkill(lastOptions, false);
+  }
+}
+
 export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   = createUnplugin((rawOptions = {}) => {
     let options: OptionsResolved | null = null;
-    let serversStarted = false;
+    let isDevServer = false;
 
     const name = 'unplugin-devpilot';
 
-    async function ensureOptionsResolved() {
-      if (!options) {
-        options = await resolveOptions(rawOptions);
-      }
-      return options;
-    }
-
-    async function startServers() {
-      if (serversStarted) { return; }
-      serversStarted = true;
-      const resolvedOptions = await ensureOptionsResolved();
-      // Register plugin server methods before starting WebSocket server
-      registerPluginServerMethods(resolvedOptions.plugins);
-      // Register plugin mcp register methods before starting WebSocket server
-      registerPluginMcpRegisterMethods(resolvedOptions.plugins);
-      startWebSocketServer(resolvedOptions.wsPort);
-      await startMcpServer(resolvedOptions.mcpPort);
-      // Generate core skill file
-      await generateCoreSkill(resolvedOptions, process.env.NODE_ENV !== 'production');
-    }
-
-    async function stopServers() {
-      if (!serversStarted) { return; }
-      const resolvedOptions = await ensureOptionsResolved();
-      serversStarted = false;
-      stopWebSocketServer();
-      stopMcpServer();
-      await killPort(resolvedOptions.mcpPort);
-      // Clean up core skill file
-      await generateCoreSkill(resolvedOptions, false);
+    async function ensureServersStarted() {
+      options = await startServers(rawOptions);
     }
 
     return {
@@ -108,50 +108,63 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       async load(id) {
         if (id === RESOLVED_VIRTUAL_MODULE_ID) {
-          const resolvedOptions = await ensureOptionsResolved();
-          return generateVirtualClientModule(resolvedOptions, process.env.NODE_ENV !== 'production');
+          if (!options) {
+            options = await resolveOptions(rawOptions);
+          }
+          return generateVirtualClientModule(options, process.env.NODE_ENV !== 'production');
         }
       },
 
       buildStart() {
-        // Only start servers in development mode
         if (process.env.NODE_ENV === 'production') { return; }
-        return startServers();
+        if (isDevServer) { return; }
+        return ensureServersStarted();
       },
 
       buildEnd() {
-        stopServers();
+        if (isDevServer) { return; }
+        return stopServers();
       },
 
       vite: {
         configureServer() {
-          return startServers();
+          isDevServer = true;
+          ensureServersStarted();
         },
       },
 
       webpack(compiler) {
         compiler.hooks.watchRun.tapPromise(name, async () => {
-          await startServers();
+          isDevServer = true;
+          await ensureServersStarted();
         });
-        compiler.hooks.done.tap(name, () => {
-          if (!compiler.options.watch) {
-            stopServers();
-          }
+        compiler.hooks.shutdown?.tap(name, () => {
+          stopServers();
         });
       },
 
       rspack(compiler) {
         compiler.hooks.watchRun.tapPromise(name, async () => {
-          await startServers();
+          isDevServer = true;
+          await ensureServersStarted();
         });
-        compiler.hooks.done.tap(name, () => {
-          if (!compiler.options.watch) {
-            stopServers();
-          }
+        compiler.hooks.shutdown?.tap(name, () => {
+          stopServers();
         });
+      },
+
+      farm: {
+        configureDevServer() {
+          isDevServer = true;
+          ensureServersStarted();
+        },
       },
     };
   });
+
+process.on('beforeExit', () => {
+  stopServers();
+});
 
 export default unpluginDevpilot;
 export { clientManager } from './core/client-manager';

@@ -1,6 +1,14 @@
 import type { DevpilotPluginContext, McpServerRegister } from './plugin';
 import { checkPort, getRandomPort } from 'get-port-please';
 
+export let lastResolvedWsPort: number | undefined;
+export let lastResolvedMcpPort: number | undefined;
+
+export function resetLastResolvedPorts(): void {
+  lastResolvedWsPort = undefined;
+  lastResolvedMcpPort = undefined;
+}
+
 export interface DevpilotPlugin {
   namespace: string
   /**
@@ -63,36 +71,47 @@ export interface Options {
 export type OptionsResolved = Required<Omit<Options, 'skillCorePath'>> & Pick<Options, 'skillCorePath'>;
 
 export async function resolveOptions(options: Options): Promise<OptionsResolved> {
-  // wsPort: use specified port if available, otherwise randomly allocate
-  let wsPort: number;
-  if (options.wsPort !== undefined) {
-    const wsPortInUse = await checkPort(options.wsPort);
-    if (wsPortInUse === false) {
-      wsPort = options.wsPort;
-    }
-    else {
-      wsPort = await getRandomPort();
-    }
-  }
-  else {
-    wsPort = await getRandomPort();
-  }
+  const wsPort = await resolveWsPort(options.wsPort);
+  const mcpPort = await resolveMcpPort(options.mcpPort);
 
-  // mcpPort checks if the specified port (or default 3101) is available
-  // If occupied, throw an error
-  const preferredMcpPort = options.mcpPort || 3101;
-  const portAvailable = await checkPort(preferredMcpPort);
-
-  if (portAvailable === false) {
-    throw new Error(
-      `MCP port ${preferredMcpPort} is already in use. Please specify a different port or free up the port.`,
-    );
-  }
+  lastResolvedWsPort = wsPort;
+  lastResolvedMcpPort = mcpPort;
 
   return {
     wsPort,
-    mcpPort: preferredMcpPort,
+    mcpPort,
     plugins: options.plugins || [],
     skillCorePath: options.skillCorePath,
   };
+}
+
+async function resolveWsPort(preferred?: number): Promise<number> {
+  const candidate = preferred ?? lastResolvedWsPort;
+  if (candidate !== undefined) {
+    const available = await checkPort(candidate);
+    if (available !== false) {
+      return candidate;
+    }
+    if (candidate === lastResolvedWsPort) {
+      return candidate;
+    }
+  }
+  if (lastResolvedWsPort !== undefined) {
+    return lastResolvedWsPort;
+  }
+  return getRandomPort();
+}
+
+async function resolveMcpPort(preferred?: number): Promise<number> {
+  const candidate = preferred || 3101;
+  if (candidate === lastResolvedMcpPort) {
+    return candidate;
+  }
+  const available = await checkPort(candidate);
+  if (available === false) {
+    throw new Error(
+      `MCP port ${candidate} is already in use. Please specify a different port or free up the port.`,
+    );
+  }
+  return candidate;
 }

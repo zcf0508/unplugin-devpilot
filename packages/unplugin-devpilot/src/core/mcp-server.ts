@@ -356,9 +356,15 @@ export async function startMcpServer(port: number): Promise<Server> {
   });
 }
 
-export function stopMcpServer(): void {
-  if (httpServer) {
-    httpServer.close();
-    httpServer = null;
-  }
+export function stopMcpServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (httpServer) {
+      const server = httpServer;
+      httpServer = null;
+      server.close(() => resolve());
+    }
+    else {
+      resolve();
+    }
+  });
 }

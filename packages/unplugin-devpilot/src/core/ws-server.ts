@@ -86,9 +86,15 @@ export function startWebSocketServer(port: number): WebSocketServer {
   return wss;
 }
 
-export function stopWebSocketServer(): void {
-  if (wss) {
-    wss.close();
-    wss = null;
-  }
+export function stopWebSocketServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (wss) {
+      const server = wss;
+      wss = null;
+      server.close(() => resolve());
+    }
+    else {
+      resolve();
+    }
+  });
 }
