@@ -1,6 +1,6 @@
 - never fix lint error
 - always fix type error
-- core module need unit test, and do not test the third-party module
+- core modules need unit test coverage, but avoid writing tests blindly—only cover essential modules, and tests should not verify logic from third-party libraries
 - esm module export is better than class
 - test cases prefer using `toMatchInlineSnapshot` instead of `toContain`
 - functions should not have circular references and should be relatively independent
