@@ -235,8 +235,8 @@ export default {
 ## 开发
 
 ### 前置要求
-- Node.js 20.19.0+
-- pnpm (推荐)
+- Node.js 22+
+- pnpm@~9
 
 ### 安装依赖
 ```bash

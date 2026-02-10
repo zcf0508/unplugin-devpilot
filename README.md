@@ -238,8 +238,8 @@ export default {
 ## Development
 
 ### Prerequisites
-- Node.js 20.19.0+
-- pnpm (recommended)
+- Node.js 22+
+- pnpm@~9
 
 ### Install dependencies
 ```bash
