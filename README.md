@@ -30,9 +30,9 @@ npm install -D devpilot-plugin-dom-inspector
 <summary><b>Vite</b></summary>
 
 ```ts
+// vite.config.ts
 import DomInspector from 'devpilot-plugin-dom-inspector';
 import Devpilot from 'unplugin-devpilot/vite';
-// vite.config.ts
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -50,8 +50,8 @@ export default defineConfig({
 <summary><b>Webpack</b></summary>
 
 ```js
-import DomInspector from 'devpilot-plugin-dom-inspector';
 // webpack.config.js
+import DomInspector from 'devpilot-plugin-dom-inspector';
 import Devpilot from 'unplugin-devpilot/webpack';
 
 export default {
@@ -69,8 +69,8 @@ export default {
 <summary><b>Rspack</b></summary>
 
 ```ts
-import DomInspector from 'devpilot-plugin-dom-inspector';
 // rspack.config.ts
+import DomInspector from 'devpilot-plugin-dom-inspector';
 import Devpilot from 'unplugin-devpilot/rspack';
 
 export default {

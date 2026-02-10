@@ -38,16 +38,16 @@ function isDirectoryPath(path: string): boolean {
 
 /**
  * Get the core skill file path, handling both directory and file paths
- * @param skillCorePath - The configured skill core path (directory or file)
+ * @param skillPath - The configured skill core path (directory or file)
  * @returns The actual file path to use for the core skill file
  */
-function getCoreSkillFilePath(skillCorePath: string): string {
-  if (isDirectoryPath(skillCorePath)) {
+function getCoreSkillFilePath(skillPath: string): string {
+  if (isDirectoryPath(skillPath)) {
     // If it's a directory, use SKILL.md as the filename
-    return join(skillCorePath, 'SKILL.md');
+    return join(skillPath, 'SKILL.md');
   }
   // If it's a file path, use it as-is
-  return skillCorePath;
+  return skillPath;
 }
 
 /**
@@ -158,9 +158,9 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
   const content = generateCoreSkillContent(options, isDev);
 
   // Process each configured path
-  for (const skillCorePath of options.skillPaths) {
+  for (const skillPath of options.skillPaths) {
     // Get the actual file path (handle directory paths)
-    const skillFilePath = getCoreSkillFilePath(skillCorePath);
+    const skillFilePath = getCoreSkillFilePath(skillPath);
 
     // If in non-dev mode or no content, ensure file doesn't exist or is empty
     if (!isDev || !content) {

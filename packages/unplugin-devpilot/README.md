@@ -79,6 +79,7 @@ export default defineConfig({
       wsPort: 3100, // Optional: Specify WebSocket port (will be randomly allocated if not specified)
       mcpPort: 3101, // Optional: Specify MCP server port (will use random port if specified port is occupied)
       plugins: [], // Optional: Array of DevpilotPlugin instances
+      skillPaths: ['./.github/skills/devpilot', './.cursor/skills/devpilot'], // Optional: Array of paths to core skill files
     }),
   ],
 });
