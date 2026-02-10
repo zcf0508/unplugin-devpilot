@@ -2,6 +2,7 @@ import type { DevpilotPlugin, OptionsResolved } from './options';
 import { promises as fs } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getBuiltinToolNames } from './builtin-tools';
 import { getPluginStorage } from './storage';
 import { resolveModule } from './utils';
 
@@ -92,42 +93,70 @@ function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolv
     });
 }
 
+function collectAllowedTools(plugins: DevpilotPlugin[], options: OptionsResolved): string[] {
+  const tools: string[] = [...getBuiltinToolNames()];
+  for (const plugin of plugins) {
+    if (plugin.mcpSetup) {
+      try {
+        const ctx = { wsPort: options.wsPort, storage: getPluginStorage(plugin.namespace) };
+        const mcps = plugin.mcpSetup(ctx);
+        for (const register of mcps) {
+          const result = register();
+          if (result.name) {
+            tools.push(result.name);
+          }
+        }
+      }
+      catch {
+        // skip
+      }
+    }
+  }
+  return tools;
+}
+
+function generateFrontmatter(options: OptionsResolved): string {
+  const allowedTools = collectAllowedTools(options.plugins, options);
+  const toolsYaml = allowedTools.length > 0
+    ? `allowed-tools: [\n${allowedTools.map(t => `  "${t}"`).join(',\n')}\n]`
+    : 'allowed-tools: []';
+
+  return `---
+name: devpilot
+description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+${toolsYaml}
+---`;
+}
+
 /**
  * Generate the core skill markdown content
  */
 function generateCoreSkillContent(options: OptionsResolved, isDev: boolean): string {
-  // In non-dev mode, return empty content
   if (!isDev) {
     return '';
   }
 
   const pluginSkills = getPluginSkillModules(options.plugins, options);
 
-  // Generate skill list with relative paths to copied plugin skill files
   const skillList = pluginSkills.map((skill) => {
-    // For file:// paths, we'll copy the file to the core skill directory
-    // For npm package paths, we keep the original path
-    // For relative paths, we keep the original path
-
     if (skill.originalSkillModule.startsWith('file://')) {
-      // File URL - will be copied to core skill directory
-      // Use the namespace as the filename
       const linkPath = `./${skill.namespace}.md`;
       return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
     }
     else if (skill.originalSkillModule.startsWith('npm:') || (!skill.originalSkillModule.startsWith('.') && !skill.originalSkillModule.startsWith('/') && (skill.originalSkillModule.includes('/') || skill.originalSkillModule.match(/^[@a-z0-9]\S+$/i)))) {
-      // npm package path - use as-is without path conversion
       return `- [${skill.namespace}](${skill.originalSkillModule}) - ${skill.namespace} capabilities`;
     }
     else {
-      // Relative path - will be copied to core skill directory
-      // Use the namespace as the filename
       const linkPath = `./${skill.namespace}.md`;
       return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
     }
   }).join('\n');
 
-  return `# Devpilot Core Skills
+  const frontmatter = generateFrontmatter(options);
+
+  return `${frontmatter}
+
+# Devpilot Core Skills
 
 This is the core skill file that aggregates all plugin skills.
 

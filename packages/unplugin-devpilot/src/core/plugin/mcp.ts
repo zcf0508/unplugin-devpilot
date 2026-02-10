@@ -19,6 +19,19 @@ export type McpToolRegister = <
   cb: NoInfer<ToolCallback<InputArgs>>
 });
 
+export interface McpToolResolved {
+  name: string
+  config: {
+    title?: string
+    description?: string
+    inputSchema?: ZodRawShapeCompat
+    outputSchema?: ZodRawShapeCompat | AnySchema
+    annotations?: ToolAnnotations
+    _meta?: Record<string, unknown>
+  }
+  cb: ToolCallback<ZodRawShapeCompat>
+}
+
 export function defineMcpToolRegister<
   OutputArgs extends ZodRawShapeCompat | AnySchema,
   InputArgs extends undefined | ZodRawShapeCompat | AnySchema = undefined,

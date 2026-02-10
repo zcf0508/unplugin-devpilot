@@ -137,7 +137,19 @@ describe('skill-generator', () => {
       // Second call should be the core skill file (SKILL.md)
       expect(writeFileCalls[1][0]).toBe('/test/skills/devpilot/SKILL.md');
       expect(writeFileCalls[1][1]).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
@@ -198,7 +210,19 @@ describe('skill-generator', () => {
       // Second call should be the core skill file
       expect(writeFileCalls[1][0]).toBe('/test/skills/core.md');
       expect(writeFileCalls[1][1]).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
@@ -233,7 +257,19 @@ describe('skill-generator', () => {
 
       const writeFileCall = (fs.writeFile as any).mock.calls[0];
       expect(writeFileCall[1]).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
@@ -268,7 +304,19 @@ describe('skill-generator', () => {
 
       const writeFileCall = (fs.writeFile as any).mock.calls[0];
       expect(writeFileCall[1]).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
@@ -319,7 +367,19 @@ describe('skill-generator', () => {
       // Check that the core skill file was written
       const content = writeFileCalls[2][1];
       expect(content).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
@@ -350,7 +410,19 @@ describe('skill-generator', () => {
 
       const writeFileCall = (fs.writeFile as any).mock.calls[0];
       expect(writeFileCall[1]).toMatchInlineSnapshot(`
-        "# Devpilot Core Skills
+        "---
+        name: devpilot
+        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
+        allowed-tools: [
+          "list_clients",
+          "get_pending_tasks",
+          "find_clients_by_url",
+          "get_task_history",
+          "find_clients_by_title"
+        ]
+        ---
+
+        # Devpilot Core Skills
 
         This is the core skill file that aggregates all plugin skills.
 
