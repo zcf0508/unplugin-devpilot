@@ -1,12 +1,12 @@
+import { checkPort, getRandomPort } from 'get-port-please';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { resetLastResolvedPorts, resolveOptions } from '../src/core/options';
 
 vi.mock('get-port-please', () => ({
   checkPort: vi.fn(),
   getRandomPort: vi.fn(),
 }));
-
-import { checkPort, getRandomPort } from 'get-port-please';
 
 const mockCheckPort = vi.mocked(checkPort);
 const mockGetRandomPort = vi.mocked(getRandomPort);
