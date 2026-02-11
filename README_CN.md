@@ -112,7 +112,7 @@ import 'virtual:devpilot-client';
 - 视觉布局分析
 - 浏览器控制台日志访问
 - 页面和元素截图捕获
-- 10 个用于网页自动化的 MCP 工具
+- 8 个用于网页自动化的 MCP 工具
 
 **MCP 工具：**
 - `get_page_snapshot` - 获取 LLM 友好的 DOM 结构（紧凑、高效）

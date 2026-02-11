@@ -116,7 +116,7 @@ Built-in DOM inspection plugin offering:
 - Visual layout analysis
 - Browser console log access
 - Page and element screenshot capture
-- 10 MCP tools for web automation
+- 8 MCP tools for web automation
 
 **MCP Tools:**
 - `get_page_snapshot` - Get LLM-friendly DOM structure (compact, token-efficient)
