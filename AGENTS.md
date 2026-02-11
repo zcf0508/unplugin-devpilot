@@ -6,3 +6,4 @@
 - functions should not have circular references and should be relatively independent
 - `typecheck` and `test` need to be run to make sure the changed code works
 - do not use ** Barrel Files **
+- skill.md needs to be limited to under 100 lines

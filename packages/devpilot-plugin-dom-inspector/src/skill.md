@@ -54,3 +54,39 @@ To efficiently use this skill, follow this strategic workflow:
 1.  Call `get_visual_hierarchy(clientId, elementId="main-container")`.
 2.  Analyze the `formattedLayout` to see which elements are overlapping or covering the target.
 3.  Check `get_console_logs(clientId, level="error")` to see if any script errors are affecting the rendering.
+
+## Performance Debugging
+
+Use this skill for runtime performance debugging in development. The approach: add monitoring code to source files (console.time, console.log, PerformanceObserver), then use `get_console_logs` to collect and analyze data.
+
+### Common Scenarios
+
+#### Component Render Performance
+1. Add render logging to component (useEffect with console.log)
+2. Trigger renders through user interaction
+3. Call `get_console_logs(clientId, keyword="[PERF]")` to collect logs
+4. Analyze render frequency and causes
+
+#### Interaction Latency
+1. Add console.time/timeEnd around event handlers
+2. Perform the interaction
+3. Call `get_console_logs(clientId)` to see timings
+4. Identify slow handlers or blocking tasks
+
+#### Memory Leak Detection
+1. Add interval logging of performance.memory
+2. Perform suspected leaky operation multiple times
+3. Call `get_console_logs(clientId, keyword="[MEMORY]")` to collect snapshots
+4. Check if memory consistently increases
+
+#### Long Task Detection
+1. Add PerformanceObserver for 'longtask' entries with console.warn
+2. Perform operation that causes freezing
+3. Call `get_console_logs(clientId, level="warn")` to find long tasks
+4. Identify and split blocking tasks
+
+### Notes
+
+- Use log prefixes ([PERF], [MEMORY]) for easy filtering
+- Development resource loading (Vite/Webpack) doesn't reflect production - focus on runtime performance
+- Some APIs (performance.memory) are Chromium-only
