@@ -157,7 +157,7 @@ export default <DevpilotPlugin>{
           inputSchema: z.object({
             selector: z.string().describe('Element identifier - can be devpilot-id (e.g., "e123") or CSS selector (e.g., "#myId", ".myClass"). Priority: devpilot-id > CSS selector'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
@@ -169,14 +169,14 @@ export default <DevpilotPlugin>{
         },
       ),
 
-      // get_compact_snapshot - 获取紧凑DOM快照（agent-browser风格）
+      // get_page_snapshot - 获取紧凑DOM快照（agent-browser风格）
       defineMcpToolRegister(
-        'get_compact_snapshot',
+        'get_page_snapshot',
         {
-          title: 'Get Compact Snapshot',
-          description: 'Get a compact DOM snapshot in agent-browser format, optimized for token efficiency. Returns elements with unique IDs like @e123 [button] "Submit" [type=submit]',
+          title: 'Get Page Snapshot',
+          description: 'Get a compact DOM snapshot in agent-browser format, optimized for token efficiency. Returns elements with unique IDs like @e123 [button] "Submit" [type=submit]. Use this as the first step to understand page structure.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
             startNodeId: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to start snapshot from. Priority: devpilot-id > CSS selector. If provided, snapshot will be limited to this element and its children'),
           }),
@@ -195,7 +195,7 @@ export default <DevpilotPlugin>{
           const parsedResult = result.data;
 
           // Return the formatted snapshot from client (already contains LLM-friendly format)
-          // Similar to get_layout's approach - client handles all formatting
+          // Similar to get_visual_hierarchy's approach - client handles all formatting
           const snapshotText = parsedResult.formattedSnapshot || 'No snapshot data available';
 
           return {
@@ -207,15 +207,15 @@ export default <DevpilotPlugin>{
         },
       ),
 
-      // click_element_by_id - 通过ID点击元素
+      // click_element - 通过ID点击元素
       defineMcpToolRegister(
-        'click_element_by_id',
+        'click_element',
         {
-          title: 'Click Element by ID',
+          title: 'Click Element',
           description: 'Click an element by its identifier. Supports devpilot-id (e.g., e123 from @e123 [button] "Submit") or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
             id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#submitBtn"'),
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
@@ -227,16 +227,16 @@ export default <DevpilotPlugin>{
         },
       ),
 
-      // input_text_by_id - 通过ID输入文本
+      // input_text - 通过ID输入文本
       defineMcpToolRegister(
-        'input_text_by_id',
+        'input_text',
         {
-          title: 'Input Text by ID',
+          title: 'Input Text',
           description: 'Input text into an element by its identifier. Supports devpilot-id (e.g., e123 from @e123 [input] "placeholder") or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
             id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myInput"'),
             text: z.string().describe('Text to input'),
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
@@ -256,7 +256,7 @@ export default <DevpilotPlugin>{
           description: 'Get detailed information about an element by its identifier. Supports devpilot-id or CSS selector. Priority: devpilot-id > CSS selector',
           inputSchema: z.object({
             id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"'),
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
@@ -268,34 +268,36 @@ export default <DevpilotPlugin>{
         },
       ),
 
-      // get_dom_tree - 获取DOM树（可访问性树）- 保留旧方法
+      // get_element_details - 获取元素详细信息（统一方法）
       defineMcpToolRegister(
-        'get_dom_tree',
+        'get_element_details',
         {
-          title: 'Get DOM Tree',
-          description: 'Get accessibility tree snapshot of the DOM (legacy method, prefer get_compact_snapshot for token efficiency)',
+          title: 'Get Element Details',
+          description: 'Get comprehensive element information including HTML attributes, accessibility info, and position. Combines functionality of query_selector and get_element_info_by_id. Supports devpilot-id or CSS selector.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
-            maxDepth: z.number().optional().default(5).describe('Maximum depth to traverse'),
+            selector: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Can match multiple elements.'),
+            includeChildren: z.boolean().optional().default(false).describe('Include children tree in the result'),
+            maxDepth: z.number().optional().default(5).describe('Maximum depth for children tree (only used if includeChildren is true)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
-          const { clientId, maxDepth } = params;
+          const { selector, includeChildren, maxDepth, clientId } = params;
           const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.getDOMTree(maxDepth);
+            return await client.rpc.getElementDetails(selector, { includeChildren, maxDepth });
           });
           return toMcpResponse(result);
         },
       ),
 
-      // get_logs - 获取浏览器控制台日志
+      // get_console_logs - 获取浏览器控制台日志
       defineMcpToolRegister(
-        'get_logs',
+        'get_console_logs',
         {
-          title: 'Get Logs',
-          description: 'Get browser console logs including errors, warnings, and user logs. Reads from unified storage.',
+          title: 'Get Console Logs',
+          description: 'Get browser console logs including errors, warnings, and user logs. Filters logs by client ID.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (optional, logs are stored centrally)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             level: z.enum(['all', 'error', 'warn', 'info', 'debug']).optional().default('all').describe('Log level filter'),
             limit: z.number().optional().default(100).describe('Maximum number of logs to return'),
             keyword: z.string().optional().describe('Keyword to filter logs (case-insensitive substring match)'),
@@ -303,11 +305,14 @@ export default <DevpilotPlugin>{
           }),
         },
         async (params) => {
-          const { level, limit, keyword, regex } = params;
+          const { clientId, level, limit, keyword, regex } = params;
 
           const allLogs = await ctx.storage.getItem<ConsoleLogEntry[]>('logs') || [];
 
-          let filteredLogs = allLogs;
+          // Filter by clientId first
+          let filteredLogs = allLogs.filter(log => log.clientId === clientId);
+          const clientTotalLogs = filteredLogs.length;
+
           if (level !== 'all') {
             filteredLogs = filteredLogs.filter(log => log.level === level);
           }
@@ -332,8 +337,9 @@ export default <DevpilotPlugin>{
                       ? e.message
                       : String(e)}`,
                     logs: [],
-                    total: allLogs.length,
+                    total: clientTotalLogs,
                     filtered: 0,
+                    clientId,
                     level,
                     keyword,
                     regex,
@@ -351,8 +357,9 @@ export default <DevpilotPlugin>{
               text: JSON.stringify({
                 success: true,
                 logs: limitedLogs,
-                total: allLogs.length,
+                total: clientTotalLogs,
                 filtered: limitedLogs.length,
+                clientId,
                 level,
                 keyword,
                 regex,
@@ -362,14 +369,14 @@ export default <DevpilotPlugin>{
         },
       ),
 
-      // get_layout - 获取布局结构（自动判断视觉覆盖层级）
+      // get_visual_hierarchy - 获取布局结构（自动判断视觉覆盖层级）
       defineMcpToolRegister(
-        'get_layout',
+        'get_visual_hierarchy',
         {
-          title: 'Get Layout',
-          description: 'Get visual layout hierarchy of DOM elements. Automatically detects which child elements fully cover the target element. Returns multiple levels of snapshots showing visual coverage relationships. Use this to quickly understand page structure before calling get_compact_snapshot.',
+          title: 'Get Visual Hierarchy',
+          description: 'Analyze visual hierarchy by detecting which child elements fully cover their parents. Returns multi-level snapshots showing visual coverage relationships. Use this to understand the visual structure before detailed inspection.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             id: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to analyze. Priority: devpilot-id > CSS selector. Defaults to body'),
             maxDepth: z.number().optional().default(15).describe('Maximum depth to traverse'),
           }),
@@ -402,7 +409,7 @@ export default <DevpilotPlugin>{
           description: 'Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport. After scrolling, you can call get_compact_snapshot to see the updated view.',
           inputSchema: z.object({
             id: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"'),
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             behavior: z.enum(['smooth', 'auto']).optional().default('smooth').describe('Scroll behavior: smooth (animated) or auto (instant)'),
           }),
         },
@@ -422,7 +429,7 @@ export default <DevpilotPlugin>{
           title: 'Capture Screenshot',
           description: 'Capture a screenshot of the page or a specific element using SnapDOM. Works with any browser (Chrome, Safari, DingTalk, etc). For best results, keep the browser window visible. Supports devpilot-id (e.g., "e123") or CSS selector to target specific elements.',
           inputSchema: z.object({
-            clientId: z.string().optional().describe('Target client ID (defaults to task source client)'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             selector: z.string().optional().describe('Element identifier (devpilot-id or CSS selector) to capture. Priority: devpilot-id > CSS selector. If not provided, captures body or full page based on fullPage option'),
             fullPage: z.boolean().optional().default(false).describe('Capture full page (documentElement) instead of just body. Default: false'),
             format: z.enum(['png', 'jpeg', 'webp']).optional().default('png').describe('Image format: png (default), jpeg, or webp'),

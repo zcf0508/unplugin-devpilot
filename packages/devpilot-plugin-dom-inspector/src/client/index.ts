@@ -5,6 +5,7 @@ import { captureScreenshot } from './captureScreenshot';
 import { clickElementById } from './clickElementById';
 import { getCompactSnapshot } from './getCompactSnapshot';
 import { getDOMTree } from './getDOMTree';
+import { getElementDetails } from './getElementDetails';
 import { getElementInfoById } from './getElementInfoById';
 import { getLayout } from './getLayout';
 import { inputTextById } from './inputTextById';
@@ -26,6 +27,9 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
 
   // Get element info by ID
   getElementInfoById,
+
+  // Get detailed element information (unified method)
+  getElementDetails,
 
   querySelector,
 

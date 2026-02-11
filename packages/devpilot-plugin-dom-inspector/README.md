@@ -10,7 +10,7 @@ This plugin provides several MCP tools for DOM inspection and interaction.
 
 All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). This format is consistent across:
 
-- **query_selector** returns `devpilotId` in this format
+- **get_page_snapshot** returns `devpilotId` in this format
 - **User-provided devpilot-id** attributes (e.g., `data-devpilot-id="e123"`)
 - **All API parameters** that accept element identifiers
 
@@ -26,25 +26,12 @@ All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). Th
 - `"#submitBtn"` → Tries `data-devpilot-id="#submitBtn"` (unlikely), then CSS selector `#submitBtn`
 - `".btn.primary"` → Tries `data-devpilot-id=".btn.primary"` (unlikely), then CSS selector `.btn.primary`
 
-### 1. `query_selector`
-
-Query DOM elements using devpilot-id or CSS selectors with accessibility tree information.
-
-**Parameters:**
-- `selector` (string): Element identifier - can be devpilot-id (e.g., "e123") or CSS selector (e.g., "#myId", ".myClass"). Priority: devpilot-id > CSS selector
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-- `maxDepth` (number, optional, default: 5): Maximum depth to traverse
-
-**Returns:**
-- Array of matched elements with accessibility information (role, name, value, children, etc.)
-- Each element includes `devpilotId` field (format: `e1`, `e2`, ...) that can be used in other APIs
-
-### 2. `get_compact_snapshot`
+### 1. `get_page_snapshot`
 
 Get a compact DOM snapshot in agent-browser format, optimized for token efficiency.
 
 **Parameters:**
-- `clientId` (string, optional): Target client ID (defaults to task source client)
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 - `maxDepth` (number, optional, default: 5): Maximum depth to traverse
 - `startNodeId` (string, optional): Element identifier (devpilot-id or CSS selector) to start snapshot from. Priority: devpilot-id > CSS selector
 
@@ -52,79 +39,75 @@ Get a compact DOM snapshot in agent-browser format, optimized for token efficien
 - Compact snapshot with element IDs (e.g., @e123 [button] "Submit")
 - LLM-friendly formatted output with usage guide
 
-### 3. `click_element_by_id`
+### 2. `get_visual_hierarchy`
 
-Click an element by its identifier.
-
-**Parameters:**
-- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#submitBtn"
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-
-**Returns:**
-- Success status or error message
-
-### 4. `input_text_by_id`
-
-Input text into an element by its identifier.
+Analyze visual hierarchy by detecting which child elements fully cover their parents.
 
 **Parameters:**
-- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myInput"
-- `text` (string): Text to input
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-
-**Returns:**
-- Success status or error message
-
-### 5. `get_element_info_by_id`
-
-Get detailed information about an element by its identifier.
-
-**Parameters:**
-- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-
-**Returns:**
-- Element details including tag, text, and attributes
-
-### 6. `get_layout`
-
-Get visual layout hierarchy of DOM elements. Automatically detects which child elements fully cover the target element.
-
-**Parameters:**
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-- `id` (string, optional): Element identifier (devpilot-id or CSS selector) to analyze. Priority: devpilot-id > CSS selector. Defaults to body
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
+- `elementId` (string, optional): Element identifier (devpilot-id or CSS selector) to analyze. Priority: devpilot-id > CSS selector. Defaults to body
 - `maxDepth` (number, optional, default: 15): Maximum depth to traverse
 
 **Returns:**
 - Multiple levels of snapshots showing visual coverage relationships
 - LLM-friendly formatted layout with interactive elements
 
-### 7. `get_dom_tree`
+### 3. `get_element_details`
 
-Get accessibility tree snapshot of the DOM.
+Get comprehensive element information including HTML attributes, accessibility info, and position.
 
 **Parameters:**
-- `clientId` (string, optional): Target client ID (defaults to task source client)
-- `maxDepth` (number, optional, default: 5): Maximum depth to traverse
+- `selector` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Can match multiple elements.
+- `includeChildren` (boolean, optional, default: false): Include children tree in the result
+- `maxDepth` (number, optional, default: 5): Maximum depth for children tree (only used if includeChildren is true)
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 
 **Returns:**
-- Hierarchical tree structure with accessibility information
-- Includes semantic roles, accessible names, and attributes
+- Array of elements with:
+  - HTML info: tag, text, attributes
+  - Accessibility info: role, name, value, description
+  - Position info: rect (x, y, width, height)
+  - Optional children tree (accessibility nodes)
 
-### 8. `get_logs`
+### 4. `click_element`
 
-Get browser console logs including errors, warnings, and user logs.
+Click an element by its identifier.
 
 **Parameters:**
-- `clientId` (string, optional): Target client ID (defaults to task source client)
+- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#submitBtn"
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
+
+**Returns:**
+- Success status or error message
+
+### 5. `input_text`
+
+Input text into an element by its identifier.
+
+**Parameters:**
+- `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myInput"
+- `text` (string): Text to input
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
+
+**Returns:**
+- Success status or error message
+
+### 6. `get_console_logs`
+
+Get browser console logs including errors, warnings, and user logs. Filters logs by client ID.
+
+**Parameters:**
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 - `level` (enum, optional, default: "all"): Log level filter (all, error, warn, info, debug)
 - `limit` (number, optional, default: 100): Maximum number of logs to return
+- `keyword` (string, optional): Keyword to filter logs (case-insensitive substring match)
+- `regex` (string, optional): Regex pattern to filter logs (applied after keyword filter)
 
 **Returns:**
 - Captured console logs with timestamps and stack traces
 - Includes errors, warnings, info, and debug messages
 
-### 9. `capture_screenshot`
+### 7. `capture_screenshot`
 
 Capture a screenshot of the page or a specific element using [SnapDOM](https://github.com/zumerlab/snapdom). Works with any browser (Chrome, Safari, DingTalk, etc).
 
@@ -133,7 +116,7 @@ Capture a screenshot of the page or a specific element using [SnapDOM](https://g
 - `fullPage` (boolean, optional, default: false): Capture full page (documentElement) instead of just body
 - `format` (enum, optional, default: "png"): Image format - "png", "jpeg", or "webp"
 - `quality` (number, optional, default: 0.9): Image quality for jpeg/webp (0-1)
-- `clientId` (string, optional): Target client ID (defaults to task source client)
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 
 **Returns:**
 - Screenshot image data (base64) with metadata (dimensions, URL, title)
@@ -141,19 +124,19 @@ Capture a screenshot of the page or a specific element using [SnapDOM](https://g
 **Limitations:**
 - This is a client-side DOM capture, not a browser-level screenshot. Cross-origin images without CORS headers (`Access-Control-Allow-Origin`) may appear blank due to browser security restrictions. This is a limitation of all client-side capture libraries (SnapDOM, html2canvas, dom-to-image, etc.), not specific to this tool.
 
-### 10. `scroll_to_element`
+### 8. `scroll_to_element`
 
 Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport.
 
 **Parameters:**
 - `id` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Example: "e123" or "#myElement"
-- `clientId` (string, optional): Target client ID (defaults to task source client)
+- `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 - `behavior` (enum, optional, default: "smooth"): Scroll behavior - "smooth" (animated) or "auto" (instant)
 
 **Returns:**
 - Success status or error message
 
-**Note:** After scrolling, you can call `get_compact_snapshot` to see the updated view.
+**Note:** After scrolling, you can call `get_page_snapshot` to see the updated view.
 
 ## Usage
 
@@ -166,60 +149,47 @@ This plugin is automatically loaded by unplugin-devpilot. To use these tools:
 ### Example MCP Tool Calls
 
 ```typescript
-// Query all buttons using CSS selector
-const result = await mcp.call('builtin-dom-inspector_query_selector', {
-  selector: 'button',
+// Get page snapshot
+const snapshot = await mcp.call('builtin-dom-inspector_get_page_snapshot', {
+  clientId: 'c_abc123',
+  maxDepth: 5,
+});
+
+// Get page snapshot starting from specific element
+const partialSnapshot = await mcp.call('builtin-dom-inspector_get_page_snapshot', {
+  startNodeId: 'e456', // devpilot-id or CSS selector
   clientId: 'c_abc123',
 });
 
-// Query element by devpilot-id (priority 1)
-const element = await mcp.call('builtin-dom-inspector_query_selector', {
-  selector: 'e123', // Tries data-devpilot-id="e123" first, then CSS selector #e123
+// Get visual hierarchy analysis
+const hierarchy = await mcp.call('builtin-dom-inspector_get_visual_hierarchy', {
+  elementId: 'e10', // devpilot-id or CSS selector
   clientId: 'c_abc123',
+  maxDepth: 15,
 });
 
-// Query element and get devpilotId for use in other APIs
-const queryResult = await mcp.call('builtin-dom-inspector_query_selector', {
-  selector: '.my-button',
+// Get comprehensive element details
+const details = await mcp.call('builtin-dom-inspector_get_element_details', {
+  selector: 'e123', // devpilot-id or CSS selector
+  includeChildren: true,
   clientId: 'c_abc123',
 });
-const devpilotId = queryResult.elements[0].devpilotId; // e.g., "e1", "e2", ...
-// Now devpilotId can be used in click_element_by_id, scroll_to_element, etc.
 
 // Click element by devpilot-id
-await mcp.call('builtin-dom-inspector_click_element_by_id', {
+await mcp.call('builtin-dom-inspector_click_element', {
   id: 'e123', // Priority: devpilot-id > CSS selector
   clientId: 'c_abc123',
 });
 
 // Input text into element by CSS selector
-await mcp.call('builtin-dom-inspector_input_text_by_id', {
+await mcp.call('builtin-dom-inspector_input_text', {
   id: '#username', // CSS selector
   text: 'myusername',
   clientId: 'c_abc123',
 });
 
-// Get compact snapshot starting from specific element
-const snapshot = await mcp.call('builtin-dom-inspector_get_compact_snapshot', {
-  startNodeId: 'e456', // devpilot-id or CSS selector
-  clientId: 'c_abc123',
-});
-
-// Get layout analysis
-const layout = await mcp.call('builtin-dom-inspector_get_layout', {
-  id: 'e10', // devpilot-id or CSS selector
-  clientId: 'c_abc123',
-  maxDepth: 15,
-});
-
-// Get full DOM tree
-const tree = await mcp.call('builtin-dom-inspector_get_dom_tree', {
-  clientId: 'c_abc123',
-  maxDepth: 10,
-});
-
-// Get recent error logs
-const logs = await mcp.call('builtin-dom-inspector_get_logs', {
+// Get console logs filtered by level
+const logs = await mcp.call('builtin-dom-inspector_get_console_logs', {
   clientId: 'c_abc123',
   level: 'error',
   limit: 50,
@@ -232,19 +202,19 @@ await mcp.call('builtin-dom-inspector_scroll_to_element', {
   behavior: 'smooth', // or 'auto'
 });
 
-// Query element, scroll to it, then get snapshot
-const result = await mcp.call('builtin-dom-inspector_query_selector', {
+// Complete workflow: find element, scroll to it, then get snapshot
+const details = await mcp.call('builtin-dom-inspector_get_element_details', {
   selector: '.ayu-card:has(.i-lucide-pause-circle)',
   clientId: 'c_abc123',
 });
-const devpilotId = result.elements[0].devpilotId;
+const devpilotId = details.elements[0].devpilotId;
 
 await mcp.call('builtin-dom-inspector_scroll_to_element', {
   id: devpilotId,
   clientId: 'c_abc123',
 });
 
-const snapshot = await mcp.call('builtin-dom-inspector_get_compact_snapshot', {
+const snapshot = await mcp.call('builtin-dom-inspector_get_page_snapshot', {
   startNodeId: devpilotId,
   clientId: 'c_abc123',
 });

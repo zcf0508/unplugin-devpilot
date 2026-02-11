@@ -92,62 +92,6 @@ const getPendingTasks = defineMcpToolRegister(
   },
 );
 
-const findClientsByUrl = defineMcpToolRegister(
-  'find_clients_by_url',
-  {
-    title: 'Find Clients by URL',
-    description: 'Find browser clients matching a URL pattern. Useful for reconnecting to specific pages after refresh.',
-    inputSchema: {
-      urlPattern: z.string().describe('URL pattern to search for (substring match, case-insensitive)'),
-      exactMatch: z.boolean().optional().default(false).describe('Require exact URL match instead of substring'),
-    },
-  },
-  async (params) => {
-    const { urlPattern, exactMatch } = params;
-
-    const allClients = clientManager.getAllClients(true);
-    let matchedClients: typeof allClients;
-
-    if (exactMatch) {
-      matchedClients = allClients.filter(c => c.url === urlPattern);
-    }
-    else {
-      const patternLower = urlPattern.toLowerCase();
-      matchedClients = allClients.filter(c => c.url.toLowerCase().includes(patternLower));
-    }
-
-    const result: Record<string, any> = {
-      matchedClients,
-      total: matchedClients.length,
-      query: { urlPattern, exactMatch },
-    };
-
-    if (matchedClients.length === 0) {
-      const allUrls = allClients.map(c => c.url).filter(Boolean);
-      result.suggestions = [
-        'No clients found matching this URL.',
-        'Try refreshing the browser page to reconnect.',
-        'Available URLs:',
-        ...allUrls.slice(0, 5).map(u => `  - ${u}`),
-      ];
-    }
-    else if (matchedClients.length === 1) {
-      const client = matchedClients[0];
-      result.suggestion = `Use clientId "${client.clientId}" to target this client in other tools.`;
-    }
-    else {
-      result.suggestion = 'Multiple clients found. Use clientId parameter to specify which one to target.';
-    }
-
-    return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify(result, null, 2),
-      }],
-    };
-  },
-);
-
 const getTaskHistory = defineMcpToolRegister(
   'get_task_history',
   {
@@ -197,52 +141,10 @@ const getTaskHistory = defineMcpToolRegister(
   },
 );
 
-const findClientsByTitle = defineMcpToolRegister(
-  'find_clients_by_title',
-  {
-    title: 'Find Clients by Title',
-    description: 'Find browser clients by page title. Useful when URL is not unique or helpful.',
-    inputSchema: {
-      titlePattern: z.string().describe('Title pattern to search for (substring match, case-insensitive)'),
-    },
-  },
-  async (params) => {
-    const { titlePattern } = params;
-    const patternLower = titlePattern.toLowerCase();
-    const matchedClients = clientManager.getAllClients(true).filter(c =>
-      c.title.toLowerCase().includes(patternLower),
-    );
-
-    const result: Record<string, any> = {
-      matchedClients,
-      total: matchedClients.length,
-      query: { titlePattern },
-    };
-
-    if (matchedClients.length === 0) {
-      const allTitles = clientManager.getAllClients(true).map(c => c.title).filter(Boolean);
-      result.suggestions = [
-        'No clients found matching this title.',
-        'Available titles:',
-        ...allTitles.slice(0, 5).map(t => `  - ${t}`),
-      ];
-    }
-
-    return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify(result, null, 2),
-      }],
-    };
-  },
-);
-
 const builtinToolRegisters = [
   listClients,
   getPendingTasks,
-  findClientsByUrl,
   getTaskHistory,
-  findClientsByTitle,
 ];
 
 export function getBuiltinTools(): McpToolResolved[] {

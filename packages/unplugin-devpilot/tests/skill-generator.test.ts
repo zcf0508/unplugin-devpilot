@@ -144,9 +144,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 
@@ -217,9 +215,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 
@@ -264,9 +260,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 
@@ -311,9 +305,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 
@@ -374,9 +366,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 
@@ -417,9 +407,7 @@ describe('skill-generator', () => {
         allowed-tools: [
           "list_clients",
           "get_pending_tasks",
-          "find_clients_by_url",
-          "get_task_history",
-          "find_clients_by_title"
+          "get_task_history"
         ]
         ---
 

@@ -50,7 +50,9 @@ function captureConsoleLogs() {
         message = 'Unable to serialize log message';
       }
 
+      const client = getDevpilotClient<DomInspectorServerMethods>();
       const logEntry: ConsoleLogEntry = {
+        clientId: client?.getClientId() || 'unknown',
         level,
         message,
         timestamp,
@@ -69,7 +71,9 @@ function captureConsoleLogs() {
   });
 
   window.addEventListener('error', (event: ErrorEvent) => {
+    const client = getDevpilotClient<DomInspectorServerMethods>();
     pendingLogs.push({
+      clientId: client?.getClientId() || 'unknown',
       level: 'error',
       message: `${event.message} at ${event.filename}:${event.lineno}:${event.colno}`,
       timestamp: Date.now(),
@@ -79,7 +83,9 @@ function captureConsoleLogs() {
   });
 
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+    const client = getDevpilotClient<DomInspectorServerMethods>();
     pendingLogs.push({
+      clientId: client?.getClientId() || 'unknown',
       level: 'error',
       message: `Unhandled Promise Rejection: ${String(event.reason)}`,
       timestamp: Date.now(),

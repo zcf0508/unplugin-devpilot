@@ -38,12 +38,39 @@ export interface ElementInfo {
   error?: string
 }
 
+export interface ElementDetails {
+  success: boolean
+  elements?: Array<{
+    // Basic info
+    devpilotId: string
+    tag: string
+    text: string
+    attributes: Record<string, string>
+    // Accessibility info
+    role: string
+    name: string | null
+    value?: string
+    description?: string
+    // Position info
+    rect: {
+      x: number
+      y: number
+      width: number
+      height: number
+    }
+    // Optional children tree (accessibility nodes only)
+    children?: AccessibilityNode[]
+  }>
+  error?: string
+}
+
 export interface ElementActionResult {
   success: boolean
   error?: string
 }
 
 export interface ConsoleLogEntry {
+  clientId: string
   level: 'error' | 'warn' | 'info' | 'debug'
   message: string
   timestamp: number
@@ -142,6 +169,17 @@ export interface DomInspectorRpc {
    * @param id - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
    */
   getElementInfoById: (id: string) => Promise<ElementInfo>
+
+  /**
+   * Get detailed element information (unified method combining HTML + accessibility info)
+   * @param selector - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   * @param options.includeChildren - Include children tree in the result
+   * @param options.maxDepth - Maximum depth for children tree
+   */
+  getElementDetails: (
+    selector: string,
+    options?: { includeChildren?: boolean, maxDepth?: number },
+  ) => Promise<ElementDetails>
 
   /**
    * Get visual layout hierarchy

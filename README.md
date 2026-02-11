@@ -119,18 +119,16 @@ Built-in DOM inspection plugin offering:
 - 10 MCP tools for web automation
 
 **MCP Tools:**
-- `query_selector` - Query DOM elements with accessibility tree (returns `devpilotId` for use in other APIs)
-- `get_compact_snapshot` - Get LLM-friendly DOM structure
-- `click_element_by_id` - Click elements
-- `input_text_by_id` - Fill form fields
-- `get_element_info_by_id` - Get element details
-- `get_dom_tree` - Get full accessibility tree
-- `get_logs` - Access browser logs
-- `get_layout` - Analyze visual layout hierarchy
+- `get_page_snapshot` - Get LLM-friendly DOM structure (compact, token-efficient)
+- `get_visual_hierarchy` - Analyze visual layout hierarchy and coverage
+- `get_element_details` - Get comprehensive element info (HTML + accessibility + position)
+- `click_element` - Click elements
+- `input_text` - Fill form fields
+- `get_console_logs` - Access browser logs (filtered by client)
 - `scroll_to_element` - Scroll element into view (for scrollable containers)
 - `capture_screenshot` - Capture page or element screenshot (cross-origin images without CORS headers may appear blank)
 
-**Element ID Format:** All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). The `query_selector` tool returns `devpilotId` in this format, which can be directly used in other APIs.
+**Element ID Format:** All element identifiers use the `e` prefix format (e.g., `e1`, `e2`, `e123`). The `get_page_snapshot` tool returns `devpilotId` in this format, which can be directly used in other APIs.
 
 ## Use Cases
 
@@ -387,7 +385,7 @@ Each plugin can be configured based on its implementation. Refer to individual p
 ### Client Not Found
 - Refresh the browser page to reconnect
 - Check browser console for connection errors
-- Use `get_layout` or `list_clients` tools to discover available clients
+- Use `get_visual_hierarchy` or `list_clients` tools to discover available clients
 
 ## License
 
