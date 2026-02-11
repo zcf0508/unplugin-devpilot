@@ -1,6 +1,7 @@
 import type { DevpilotPlugin, OptionsResolved } from './options';
 import { promises as fs } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { getBuiltinToolNames } from './builtin-tools';
 import { getPluginStorage } from './storage';
@@ -212,7 +213,6 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
     }
 
     await fs.mkdir(dir, { recursive: true });
-    await fs.chmod(dir, 0o777);
 
     for (const skill of pluginSkills) {
       if (skill.originalSkillModule.startsWith('file://')) {
@@ -230,7 +230,6 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
 
     if (existingContent !== content) {
       await fs.writeFile(skillFilePath, content, 'utf-8');
-      await fs.chmod(skillFilePath, 0o777);
     }
 
     await setPermissionsRecursive(dir).catch(() => {
@@ -240,22 +239,43 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
 }
 
 async function setPermissionsRecursive(dirPath: string): Promise<void> {
-  try {
-    await fs.chmod(dirPath, 0o777);
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = join(dirPath, entry.name);
-      if (entry.isDirectory()) {
-        await setPermissionsRecursive(fullPath);
-      }
-      else {
-        await fs.chmod(fullPath, 0o777);
+  const isRoot = process.getuid?.() === 0;
+  const sudoUid = Number(process.env.SUDO_UID);
+  const sudoGid = Number(process.env.SUDO_GID);
+  const shouldChown = isRoot && !Number.isNaN(sudoUid) && !Number.isNaN(sudoGid);
+
+  async function applyPermissions(targetPath: string, mode: number): Promise<void> {
+    try {
+      await fs.chmod(targetPath, mode);
+      if (shouldChown) {
+        await fs.chown(targetPath, sudoUid, sudoGid);
       }
     }
+    catch {
+      // Ignore permission errors on individual entries
+    }
   }
-  catch {
-    // Ignore permission errors
+
+  async function walk(currentPath: string): Promise<void> {
+    await applyPermissions(currentPath, 0o777);
+    try {
+      const entries = await fs.readdir(currentPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = join(currentPath, entry.name);
+        if (entry.isDirectory()) {
+          await walk(fullPath);
+        }
+        else {
+          await applyPermissions(fullPath, 0o666);
+        }
+      }
+    }
+    catch {
+      // Ignore readdir errors
+    }
   }
+
+  await walk(dirPath);
 }
 
 async function copyPluginSkillFile(sourcePath: string, destPath: string): Promise<boolean> {
@@ -270,7 +290,6 @@ async function copyPluginSkillFile(sourcePath: string, destPath: string): Promis
     }
     if (existingDest !== skillContent) {
       await fs.writeFile(destPath, skillContent, 'utf-8');
-      await fs.chmod(destPath, 0o777);
       return true;
     }
     return false;

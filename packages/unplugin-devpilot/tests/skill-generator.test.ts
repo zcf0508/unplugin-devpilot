@@ -11,6 +11,7 @@ vi.mock('node:fs', () => ({
     unlink: vi.fn(),
     readFile: vi.fn(),
     chmod: vi.fn(),
+    chown: vi.fn(),
     readdir: vi.fn().mockResolvedValue([]),
   },
 }));
