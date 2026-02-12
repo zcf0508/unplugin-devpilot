@@ -24,8 +24,8 @@ function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResol
 }
 
 function generateVirtualClientModule(options: OptionsResolved, isDev: boolean): string {
-  // In non-dev mode, return empty module
-  if (!isDev) {
+  // In non-dev mode or test mode, return empty module
+  if (!isDev || process.env.VITEST || process.env.NODE_ENV === 'test') {
     return '';
   }
 
@@ -119,6 +119,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       buildStart() {
         if (process.env.NODE_ENV === 'production') { return; }
+        if (process.env.VITEST || process.env.NODE_ENV === 'test') { return; }
         if (isDevServer) { return; }
         return ensureServersStarted();
       },
@@ -130,6 +131,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       vite: {
         configureServer() {
+          if (process.env.VITEST || process.env.NODE_ENV === 'test') { return; }
           isDevServer = true;
           ensureServersStarted();
         },
