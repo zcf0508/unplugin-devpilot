@@ -12,6 +12,18 @@ import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0virtual:devpilot-client';
 
+/**
+ * Check if running in test environment
+ * Vitest sets: VITEST, TEST, NODE_ENV=test
+ */
+function isTestEnvironment(): boolean {
+  return !!(
+    process.env.VITEST
+    || process.env.TEST
+    || process.env.NODE_ENV === 'test'
+  );
+}
+
 function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResolved): string[] {
   return plugins
     .filter(p => p.clientModule)
@@ -26,7 +38,7 @@ function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResol
 
 function generateVirtualClientModule(options: OptionsResolved, isDev: boolean): string {
   // In non-dev mode or test mode, return empty module
-  if (!isDev || process.env.VITEST || process.env.NODE_ENV === 'test') {
+  if (!isDev || isTestEnvironment()) {
     return '';
   }
 
@@ -110,6 +122,11 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       async load(id) {
         if (id === RESOLVED_VIRTUAL_MODULE_ID) {
+          // Skip in test mode - return empty module
+          if (isTestEnvironment()) {
+            return '';
+          }
+
           if (!options) {
             options = await resolveOptions(rawOptions);
           }
@@ -119,10 +136,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       transform(code, id) {
         // Skip in production or test mode
-        if (process.env.NODE_ENV === 'production') {
-          return null;
-        }
-        if (process.env.VITEST || process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === 'production' || isTestEnvironment()) {
           return null;
         }
 
@@ -138,8 +152,9 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       },
 
       buildStart() {
-        if (process.env.NODE_ENV === 'production') { return; }
-        if (process.env.VITEST || process.env.NODE_ENV === 'test') { return; }
+        if (process.env.NODE_ENV === 'production' || isTestEnvironment()) {
+          return;
+        }
         if (isDevServer) { return; }
         return ensureServersStarted();
       },
@@ -151,7 +166,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       vite: {
         configureServer() {
-          if (process.env.VITEST || process.env.NODE_ENV === 'test') { return; }
+          if (isTestEnvironment()) { return; }
           isDevServer = true;
           ensureServersStarted();
         },
