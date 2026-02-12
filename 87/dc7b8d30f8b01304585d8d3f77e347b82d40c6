@@ -1,0 +1,23 @@
+packages/devpilot-plugin-dom-inspector/src/skill.md
+  adf4f96dd9235ef3 18,20,22,24-27,29-32,34,36-39,41-44,48-51,53,55-61,65,67,69,71,73,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "87dc7b8d30f8b01304585d8d3f77e347b82d40c6",
+  "prompts": {
+    "adf4f96dd9235ef3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88fee93f-662c-47e8-90a6-bf6ed79fc24d",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 98,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    }
+  }
+}
