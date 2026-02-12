@@ -1,7 +1,17 @@
 import { uniqueId } from 'es-toolkit/compat';
 
 // Important attributes for interaction (shared across functions)
-export const IMPORTANT_ATTRS = ['id', 'type', 'href', 'placeholder', 'role', 'name', 'value', 'for'] as const;
+export const IMPORTANT_ATTRS = [
+  'id',
+  'type',
+  'href',
+  'placeholder',
+  'role',
+  'name',
+  'value',
+  'for',
+  'data-insp-path',
+] as const;
 
 // Infer ARIA role from HTML tag
 function inferRoleFromTag(tag: string, element?: Element): string {

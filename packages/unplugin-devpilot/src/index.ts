@@ -2,6 +2,7 @@ import type { UnpluginInstance } from 'unplugin';
 import type { DevpilotPlugin, Options, OptionsResolved } from './core/options';
 import process from 'node:process';
 import { createUnplugin } from 'unplugin';
+import { injectSourceLocation } from './core/code-location-injector';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
 import { generateCoreSkill } from './core/skill-generator';
@@ -96,7 +97,6 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
     return {
       name,
-      enforce: 'pre',
 
       resolveId(id) {
         if (id === VIRTUAL_MODULE_ID) {
@@ -115,6 +115,26 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           }
           return generateVirtualClientModule(options, process.env.NODE_ENV !== 'production');
         }
+      },
+
+      transform(code, id) {
+        // Skip in production or test mode
+        if (process.env.NODE_ENV === 'production') {
+          return null;
+        }
+        if (process.env.VITEST || process.env.NODE_ENV === 'test') {
+          return null;
+        }
+
+        // Inject source location into code
+        // If code-inspector is present, it will overwrite our injection
+        // This is acceptable as code-inspector's injection is more accurate
+        const result = injectSourceLocation(code, id);
+        if (result) {
+          return { code: result };
+        }
+
+        return null;
       },
 
       buildStart() {

@@ -159,4 +159,40 @@ describe('getCompactSnapshot', () => {
     expect(result.formattedSnapshot).toContain('**Start Node:** @container');
     expect(result.formattedSnapshot).toContain('Starting Node Context');
   });
+
+  it('should include data-insp-path attribute in snapshot', async () => {
+    document.body.innerHTML = `
+      <div class="container">
+        <button data-insp-path="src/App.tsx:10:5:button">Submit</button>
+        <input type="text" data-insp-path="src/App.tsx:11:5:input" placeholder="Enter text">
+      </div>
+    `;
+
+    const result = await getCompactSnapshot({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.snapshot).toBeDefined();
+    // Should include data-insp-path in the snapshot
+    expect(result.snapshot).toContain('data-insp-path=src/App.tsx:10:5:button');
+    expect(result.snapshot).toContain('data-insp-path=src/App.tsx:11:5:input');
+  });
+
+  it('should work with elements without data-insp-path', async () => {
+    document.body.innerHTML = `
+      <div class="container">
+        <button>No Path</button>
+        <button data-insp-path="src/App.tsx:10:5:button">With Path</button>
+      </div>
+    `;
+
+    const result = await getCompactSnapshot({ maxDepth: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.snapshot).toBeDefined();
+    // Should include both elements
+    expect(result.snapshot).toContain('No Path');
+    expect(result.snapshot).toContain('With Path');
+    // Only one should have data-insp-path
+    expect(result.snapshot).toContain('data-insp-path=src/App.tsx:10:5:button');
+  });
 });
