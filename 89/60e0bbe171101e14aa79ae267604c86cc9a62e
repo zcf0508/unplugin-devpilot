@@ -1,0 +1,25 @@
+packages/devpilot-plugin-dom-inspector/tests/client/getElementInfoById.spec.ts
+  ef2b1bb16b679663 39-81
+packages/devpilot-plugin-dom-inspector/tests/client/getCompactSnapshot.spec.ts
+  ef2b1bb16b679663 162-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "8960e0bbe171101e14aa79ae267604c86cc9a62e",
+  "prompts": {
+    "ef2b1bb16b679663": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85eb72ad-ad52-4885-a38d-210db7a5a502",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 154,
+      "total_deletions": 0,
+      "accepted_lines": 154,
+      "overriden_lines": 0
+    }
+  }
+}
