@@ -1,0 +1,25 @@
+packages/devpilot-plugin-dom-inspector/src/client/utils/buildCompactSnapshot.ts
+  6b517ef5e5fba80d 463,466
+packages/devpilot-plugin-dom-inspector/src/client/getCompactSnapshot.ts
+  6b517ef5e5fba80d 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "6b37fed67c27cbf57f2777aa0b2da990e04bdb47",
+  "prompts": {
+    "6b517ef5e5fba80d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f74aca2b-ce64-49f3-9bcf-f98cbcf39878",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
