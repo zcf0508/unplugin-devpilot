@@ -1,0 +1,31 @@
+packages/unplugin-devpilot/src/index.ts
+  ef2b1bb16b679663 5,120-139
+packages/devpilot-plugin-dom-inspector/src/client/utils/buildCompactSnapshot.ts
+  ef2b1bb16b679663 12
+packages/unplugin-devpilot/package.json
+  ef2b1bb16b679663 89
+packages/unplugin-devpilot/tests/code-location-injector.test.ts
+  ef2b1bb16b679663 1-111
+packages/unplugin-devpilot/src/core/code-location-injector.ts
+  ef2b1bb16b679663 1-20,22-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "73a142b918d7444306b7201eb19daa07be68df3c",
+  "prompts": {
+    "ef2b1bb16b679663": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85eb72ad-ad52-4885-a38d-210db7a5a502",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 592,
+      "total_deletions": 238,
+      "accepted_lines": 358,
+      "overriden_lines": 2
+    }
+  }
+}
