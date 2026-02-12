@@ -34,7 +34,7 @@ function formatSnapshotForLLM(snapshot: string, url: string, title: string, star
   formatted += '  - Element properties: id, type, href, placeholder, name, value, for\n';
   formatted += '  - Interactive states: disabled, readonly, checked, selected\n';
   formatted += '  - Visual states: hidden, zero-size\n';
-  formatted += '  - Class names (first 2 classes shown)\n';
+  formatted += '  - Class names (all classes shown)\n';
   formatted += '- `{visual}`: Visual context (position, size, visibility):\n';
   formatted += '  - size:WxH - element dimensions in pixels\n';
   formatted += '  - pos:X,Y - position relative to viewport top-left\n';

@@ -460,10 +460,10 @@ function getCompactAttributes(element: Element): string[] {
     }
   }
 
-  // Class - only first 2 classes
+  // Class - include all classes
   const className = element.getAttribute('class');
   if (className) {
-    const classes = className.split(/\s+/).filter(Boolean).slice(0, 2);
+    const classes = className.split(/\s+/).filter(Boolean);
     if (classes.length > 0) {
       attrs.push(`class=${classes.join('.')}`);
     }
