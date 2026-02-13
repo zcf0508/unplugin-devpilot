@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { DevpilotPlugin } from './options';
-import type { McpServerRegister } from './plugin';
+import type { McpToolRegister } from './plugin';
 import { createServer } from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -11,7 +11,7 @@ import { getPluginStorage } from './storage';
 let httpServer: Server | null = null;
 
 // Store plugin server methods
-let mcpRegeisterMethods: Record<string, McpServerRegister[]> = {};
+let mcpRegeisterMethods: Record<string, McpToolRegister[]> = {};
 
 /**
  * Register plugin server methods

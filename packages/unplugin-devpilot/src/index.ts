@@ -205,12 +205,12 @@ process.on('beforeExit', () => {
   stopServers();
 });
 
-export default unpluginDevpilot;
 export { clientManager } from './core/client-manager';
 export type { DevpilotPlugin, Options } from './core/options';
+export default unpluginDevpilot;
 export type { DevpilotPluginContext } from './core/plugin';
-export { defineMcpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
+export { defineMcpToolRegister } from './core/plugin/mcp';
 export { resolveSkillModule } from './core/skill-generator';
 export { getPluginStorage, storage } from './core/storage';
 export * from './core/types';

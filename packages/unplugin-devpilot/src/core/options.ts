@@ -1,4 +1,4 @@
-import type { DevpilotPluginContext, McpServerRegister } from './plugin';
+import type { DevpilotPluginContext, McpToolRegister } from './plugin';
 import { checkPort, getRandomPort } from 'get-port-please';
 
 let lastResolvedWsPort: number | undefined;
@@ -30,7 +30,7 @@ export interface DevpilotPlugin {
    * These methods can be called from the client via rpcCall()
    */
   serverSetup?: (ctx: DevpilotPluginContext) => Record<string, (...args: any[]) => any>
-  mcpSetup?: (ctx: DevpilotPluginContext) => Array<McpServerRegister>
+  mcpSetup?: (ctx: DevpilotPluginContext) => Array<McpToolRegister>
   /**
    * The skill module path to be injected
    * - npm package path: 'my-plugin/skill'
