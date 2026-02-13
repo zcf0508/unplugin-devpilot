@@ -1,0 +1,25 @@
+packages/unplugin-devpilot/src/core/ws-server.ts
+  6d370942be4e8bad 102
+packages/unplugin-devpilot/src/client/index.ts
+  6d370942be4e8bad 40-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "4e2d49e5b071ffd9d6e0028fa74615b5c9dd43ed",
+  "prompts": {
+    "6d370942be4e8bad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9ebd1709-fdf5-4ed3-a784-79847ddeb216",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 2,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
