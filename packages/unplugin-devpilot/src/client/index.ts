@@ -37,7 +37,12 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
   } as RpcHandlers;
 
   function connect(): void {
-    ws = new WebSocket(`ws://localhost:${wsPort}`);
+    // Use location.hostname to support LAN debugging (not hardcoded localhost)
+    const protocol = location.protocol === 'https:'
+      ? 'wss:'
+      : 'ws:';
+    const host = location.hostname;
+    ws = new WebSocket(`${protocol}//${host}:${wsPort}`);
 
     ws.onopen = () => {
       console.log('[devpilot] Connected to server');

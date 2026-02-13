@@ -99,7 +99,7 @@ export function startWebSocketServer(port: number): WebSocketServer {
   });
 
   wss.on('listening', () => {
-    console.warn(`[unplugin-devpilot] WebSocket server listening on ws://localhost:${port}`);
+    console.warn(`[unplugin-devpilot] WebSocket server listening on port ${port} (accessible via ws://<host>:${port})`);
   });
 
   return wss;
