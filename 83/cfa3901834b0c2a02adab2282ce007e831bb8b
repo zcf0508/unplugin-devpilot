@@ -1,0 +1,23 @@
+packages/unplugin-devpilot/src/client/index.ts
+  6d370942be4e8bad 12-28,32-77,88-89,117-118,176-182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "83cfa3901834b0c2a02adab2282ce007e831bb8b",
+  "prompts": {
+    "6d370942be4e8bad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9ebd1709-fdf5-4ed3-a784-79847ddeb216",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 95,
+      "total_deletions": 21,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    }
+  }
+}
