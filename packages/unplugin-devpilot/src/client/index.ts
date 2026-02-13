@@ -9,6 +9,72 @@ function generateId(): string {
   return Math.random().toString(36).slice(2, 12);
 }
 
+function detectBrowser() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+
+  // Detect iOS version
+  let iOSVersion = 0;
+  if (isIOS) {
+    const match = ua.match(/OS (\d+)_/);
+    if (match) {
+      iOSVersion = Number.parseInt(match[1], 10);
+    }
+  }
+
+  return { isIOS, isSafari, iOSVersion };
+}
+
+/**
+ * https://github.com/zcf0508/unplugin-https-reverse-proxy/issues/5
+ */
+function showWebSocketError(protocol: string) {
+  const { isIOS, isSafari, iOSVersion } = detectBrowser();
+
+  // Only show error for Safari with HTTPS
+  if (!isSafari || protocol !== 'wss:') {
+    return;
+  }
+
+  let message = '⚠️ WebSocket Connection Failed\n\n';
+
+  if (isIOS) {
+    if (iOSVersion >= 15) {
+      message += 'Solutions:\n\n'
+        + '1. Enable experimental feature (Recommended):\n'
+        + '   Settings → Safari → Advanced → Experimental Features\n'
+        + '   → Enable "NSURLSession WebSocket"\n\n'
+        + '2. Or ensure certificate is trusted:\n'
+        + '   Settings → General → About\n'
+        + '   → Certificate Trust Settings';
+    }
+    else if (iOSVersion >= 13) {
+      message += `iOS ${iOSVersion} does not support WebSocket with self-signed certificates\n\n`
+        + 'Solutions:\n\n'
+        + '1. Upgrade to iOS 15+ and enable experimental feature\n'
+        + '2. Or use HTTP access (non-HTTPS)\n'
+        + '3. Or use mkcert to generate locally-trusted certificates';
+    }
+    else {
+      message += 'Current iOS version does not support WebSocket with self-signed certificates\n\n'
+        + 'Please upgrade to iOS 15+ or use HTTP access';
+    }
+  }
+  else {
+    // macOS Safari
+    message += 'Solutions:\n\n'
+      + '1. Enable experimental feature:\n'
+      + '   Safari → Settings → Advanced → Show Develop menu\n'
+      + '   → Develop → Experimental Features\n'
+      + '   → Enable "NSURLSession WebSocket"\n\n'
+      + '2. Or ensure certificate is trusted';
+  }
+
+  // eslint-disable-next-line no-alert
+  alert(message);
+}
+
 export function createDevpilotClient<S extends Record<string, any> = ServerFunctions>(
   options: DevpilotClientOptions,
 ): DevpilotClient<S> {
@@ -19,6 +85,8 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
   const pendingCalls = new Map<string, { resolve: (value: unknown) => void, reject: (reason: Error) => void }>();
   const connectedCallbacks = new Set<() => void>();
   const disconnectedCallbacks = new Set<() => void>();
+  let hasShownError = false; // Track if we've shown the error popup
+  let hasConnectedOnce = false; // Track if we've ever connected successfully
 
   // Create rpcHandlers by merging default implementations with custom handlers and extended handlers
   const rpcHandlers = {
@@ -46,6 +114,8 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
 
     ws.onopen = () => {
       console.log('[devpilot] Connected to server');
+      hasConnectedOnce = true;
+      hasShownError = false; // Reset error flag on successful connection
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -103,6 +173,13 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
 
     ws.onerror = (err) => {
       console.error('[devpilot] WebSocket error:', err);
+
+      // Show error popup only once and only if we've never connected successfully
+      // (to avoid showing error on temporary network issues)
+      if (!hasShownError && !hasConnectedOnce) {
+        hasShownError = true;
+        showWebSocketError(protocol);
+      }
     };
   }
 
