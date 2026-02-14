@@ -10,7 +10,7 @@ const listClients = defineMcpToolRegister(
     title: 'List Clients',
     description: 'List all connected browser instances with optional filtering by URL, title, or clientId',
     inputSchema: {
-      activeOnly: z.boolean().optional().default(true).describe('Only list active clients'),
+      activeOnly: z.boolean().optional().default(false).describe('Only list active clients'),
       urlPattern: z.string().optional().describe('Filter clients by URL pattern (substring match, case-insensitive)'),
       titlePattern: z.string().optional().describe('Filter clients by page title pattern (substring match, case-insensitive)'),
       clientId: z.string().optional().describe('Filter by specific client ID'),
