@@ -434,12 +434,13 @@ export default <DevpilotPlugin>{
             fullPage: z.boolean().optional().default(false).describe('Capture full page (documentElement) instead of just body. Default: false'),
             format: z.enum(['png', 'jpeg', 'webp']).optional().default('png').describe('Image format: png (default), jpeg, or webp'),
             quality: z.number().optional().default(0.9).describe('Image quality for jpeg/webp (0-1). Default: 0.9'),
+            maxLongSide: z.number().optional().default(2000).describe('Max long side of the image (pixels). Default: 2000. Image will be resized if exceeded.'),
           }),
         },
         async (params) => {
-          const { clientId, selector, fullPage, format, quality } = params;
+          const { clientId, selector, fullPage, format, quality, maxLongSide } = params;
           const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.captureScreenshot({ selector, fullPage, format, quality });
+            return await client.rpc.captureScreenshot({ selector, fullPage, format, quality, maxLongSide });
           });
 
           // Handle RPC error (client not found, disconnected, etc.)

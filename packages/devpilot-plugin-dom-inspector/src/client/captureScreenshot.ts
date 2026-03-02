@@ -7,11 +7,13 @@ export async function captureScreenshot(options?: {
   fullPage?: boolean
   format?: 'png' | 'jpeg' | 'webp'
   quality?: number
+  maxLongSide?: number
 }): Promise<ScreenshotResult> {
   const selector = options?.selector;
   const fullPage = options?.fullPage ?? false;
   const format = options?.format ?? 'png';
   const quality = options?.quality ?? 0.9;
+  const maxLongSide = options?.maxLongSide ?? 2000;
 
   try {
     console.log('[devpilot-dom-inspector] captureScreenshot called with options:', options);
@@ -75,7 +77,37 @@ export async function captureScreenshot(options?: {
     }
 
     // Get data URL from image src
-    const dataUrl = imageElement.src;
+    let dataUrl = imageElement.src;
+
+    // Handle Retina displays and maxLongSide
+    const dpr = window.devicePixelRatio || 1;
+    const { width: currentWidth, height: currentHeight } = imageElement;
+
+    // Step 1: Normalize to 1x scale (CSS pixels)
+    let targetWidth = currentWidth / dpr;
+    let targetHeight = currentHeight / dpr;
+
+    // Step 2: Check if normalized long side exceeds maxLongSide
+    const normalizedLongSide = Math.max(targetWidth, targetHeight);
+    if (normalizedLongSide > maxLongSide) {
+      const scaleFactor = maxLongSide / normalizedLongSide;
+      targetWidth *= scaleFactor;
+      targetHeight *= scaleFactor;
+    }
+
+    // Step 3: Perform resize if target dimensions are different from current
+    if (Math.round(targetWidth) !== currentWidth || Math.round(targetHeight) !== currentHeight) {
+      console.log(`[devpilot-dom-inspector] Resizing image: ${currentWidth}x${currentHeight} (DPR: ${dpr}) -> ${Math.round(targetWidth)}x${Math.round(targetHeight)} (Max long side: ${maxLongSide})`);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(targetWidth);
+      canvas.height = Math.round(targetHeight);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+        dataUrl = canvas.toDataURL(mimeType, quality);
+      }
+    }
+
     const base64Data = dataUrl.split(',')[1];
 
     console.log('[devpilot-dom-inspector] Screenshot captured successfully');

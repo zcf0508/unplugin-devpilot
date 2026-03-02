@@ -200,12 +200,14 @@ export interface DomInspectorRpc {
    * @param options.fullPage - Capture full page (documentElement) instead of just viewport (body). Default: false
    * @param options.format - Image format: 'png' (default), 'jpeg', or 'webp'
    * @param options.quality - Image quality for jpeg/webp (0-1). Default: 0.9
+   * @param options.maxLongSide - Max long side of the image (pixels). Default: 2000. Image will be resized if exceeded.
    */
   captureScreenshot: (options?: {
     selector?: string
     fullPage?: boolean
     format?: 'png' | 'jpeg' | 'webp'
     quality?: number
+    maxLongSide?: number
   }) => Promise<ScreenshotResult>
 
   // Legacy methods
