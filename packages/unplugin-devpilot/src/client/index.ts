@@ -29,11 +29,11 @@ function detectBrowser() {
 /**
  * https://github.com/zcf0508/unplugin-https-reverse-proxy/issues/5
  */
-function showWebSocketError(protocol: string) {
+function showWebSocketError() {
   const { isIOS, isSafari, iOSVersion } = detectBrowser();
 
-  // Only show error for Safari with HTTPS
-  if (!isSafari || protocol !== 'wss:') {
+  // Only show error for Safari
+  if (!isSafari) {
     return;
   }
 
@@ -106,11 +106,9 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
 
   function connect(): void {
     // Use location.hostname to support LAN debugging (not hardcoded localhost)
-    const protocol = location.protocol === 'https:'
-      ? 'wss:'
-      : 'ws:';
+    // Always use ws:// (not wss://) as the WebSocket server doesn't support WSS
     const host = location.hostname;
-    ws = new WebSocket(`${protocol}//${host}:${wsPort}`);
+    ws = new WebSocket(`ws://${host}:${wsPort}`);
 
     ws.onopen = () => {
       console.log('[devpilot] Connected to server');
@@ -178,7 +176,7 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
       // (to avoid showing error on temporary network issues)
       if (!hasShownError && !hasConnectedOnce) {
         hasShownError = true;
-        showWebSocketError(protocol);
+        showWebSocketError();
       }
     };
   }
