@@ -6,10 +6,11 @@
 
 - 🔌 **通用插件系统** - 一次编写，处处使用
 - 🌐 **多构建工具支持** - 通过 [unplugin](https://github.com/unjs/unplugin) 支持 Vite、Webpack、Rspack、Farm 等
-- 🔄 **实时双向通信** - 基于 WebSocket 的浏览器与开发服务器间的双向 RPC 通信
+- 🔄 **实时双向通信** - 基于 WebSocket 的浏览器与开发服务器间的双向 RPC 通信（支持 HTTP 和 HTTPS）
 - 🤖 **MCP 集成** - 内置 Model Context Protocol 服务器，支持 AI/LLM 自动化
 - 🎯 **DOM 检查器插件** - 开箱即用的 DOM 检查和操控能力，用于网页自动化
 - 🛠️ **仅开发模式** - 零生产环境开销，仅在开发模式下运行
+- 🔒 **HTTPS 支持** - 通过自动 WebSocket 代理与 HTTPS 开发服务器无缝协作
 
 ## 快速开始
 
@@ -42,6 +43,10 @@ export default defineConfig({
 
 </details>
 
+WebSocket 代理会自动配置，支持 HTTP 和 HTTPS 开发服务器。
+
+</details>
+
 <details>
 <summary><b>Webpack</b></summary>
 
@@ -58,6 +63,8 @@ export default {
   ],
 };
 ```
+
+WebSocket 代理会在 webpack-dev-server 中自动配置。
 
 </details>
 
@@ -77,6 +84,33 @@ export default {
   ],
 };
 ```
+
+WebSocket 代理会在 rspack-dev-server 中自动配置。
+
+</details>
+
+<details>
+<summary><b>Farm</b></summary>
+
+```ts
+// farm.config.ts
+import DomInspector from 'devpilot-plugin-dom-inspector';
+import Devpilot, { getProxyConfig } from 'unplugin-devpilot/farm';
+
+// 注意：wsPort 是 WebSocket 服务器端口（从控制台输出获取）
+export default defineConfig({
+  plugins: [
+    Devpilot({
+      plugins: [DomInspector],
+    }),
+  ],
+  server: {
+    proxy: getProxyConfig(60427),
+  },
+});
+```
+
+Farm 需要手动配置代理。`getProxyConfig(wsPort)` 辅助函数会生成正确的代理配置。实际的 `wsPort` 会在开发服务器启动时输出到控制台。
 
 </details>
 
@@ -155,10 +189,17 @@ import 'virtual:devpilot-client';
 │           │ WebSocket          │ RPC       │
 └───────────┼────────────────────┼───────────┘
             │                    │
+            │  WSS (通过 dev     │   WS (直接)
+            │  服务器代理)       │
 ┌───────────┼────────────────────┼──────────┐
 │           ▼                    ▼          │
 │  ┌─────────────────────────────────────┐  │
 │  │    开发服务器 (Node.js)             │  │
+│  │  ┌──────────────────────────────┐   │  │
+│  │  │  WebSocket 代理              │   │  │
+│  │  │  (为所有构建工具             │   │  │
+│  │  │   自动配置)                  │   │  │
+│  │  └──────────────────────────────┘   │  │
 │  │  ┌──────────────────────────────┐   │  │
 │  │  │  WebSocket 服务器 (:3100)    │   │  │
 │  │  │  - 客户端管理                │   │  │
@@ -341,21 +382,27 @@ pnpm typecheck
 
 ### 端口配置
 
-插件会自动管理端口分配以防止冲突：
+插件在内部自动管理端口分配：
 
 ```ts
 Devpilot({
-  wsPort: 3100, // 可选：WebSocket 服务器端口（未指定时随机分配）
-  mcpPort: 3101, // 可选：MCP 服务器端口（被占用时会报错）
+  mcpPort: 3101, // 可选：MCP 服务器端口（默认 3101）
   plugins: [/* ... */],
 });
 ```
 
-**端口分配策略：**
-- **wsPort**: 提供时，如果端口可用则使用该端口；否则随机分配一个可用端口。未提供时，自动分配一个随机可用端口。这确保没有端口冲突。
-- **mcpPort**: 未提供时，默认使用 3101。如果该端口已被占用，会抛出错误。
+**端口分配：**
+- **WebSocket**: 端口在内部自动分配。WebSocket 连接通过开发服务器代理（通过 `/__devpilot_ws`），因此可以无缝支持 HTTP 和 HTTPS。
+- **MCP**: 默认端口 3101。如果被占用，请指定不同端口或释放被占用的端口。
 
-这确保你的 MCP 服务器在可预测的端口上运行。如果默认端口被占用，你需要指定不同的端口或释放被占用的端口。
+### HTTPS 支持
+
+插件自动支持 HTTPS 开发服务器（如使用 `unplugin-https-reverse-proxy` 或 Vite 内置 HTTPS）。WebSocket 连接通过开发服务器使用相同的协议代理：
+
+- **HTTP 页面**：通过 `ws://` 连接（WebSocket）
+- **HTTPS 页面**：通过 `wss://` 连接（安全 WebSocket）
+
+HTTPS 支持无需额外配置。
 
 ### 插件选项
 每个插件可以根据其实现进行配置。请参考各个插件的文档。
@@ -371,8 +418,8 @@ Devpilot({
 
 ### WebSocket 连接失败
 - 确保开发服务器正在运行
-- 检查端口 3100 是否未被防火墙阻止
-- 验证 `wsPort` 配置是否正确
+- 对于 HTTPS 服务器，确保证书被浏览器信任
+- 检查浏览器控制台中的连接错误
 
 ### MCP 工具不可用
 - 确认插件已在配置中注册

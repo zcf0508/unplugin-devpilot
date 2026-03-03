@@ -10,10 +10,11 @@ A universal plugin framework for development tools that enables seamless browser
 
 - 🔌 **Universal Plugin System** - Create plugins once, use everywhere
 - 🌐 **Multi-Bundler Support** - Works with Vite, Webpack, Rspack, Farm, and more via [unplugin](https://github.com/unjs/unplugin)
-- 🔄 **Real-time Communication** - WebSocket-based bidirectional RPC between browser and development server
+- 🔄 **Real-time Communication** - WebSocket-based bidirectional RPC between browser and development server (works with HTTP and HTTPS)
 - 🤖 **MCP Integration** - Built-in Model Context Protocol server for AI/LLM automation
 - 🎯 **DOM Inspector Plugin** - Out-of-the-box DOM inspection and manipulation for web automation
 - 🛠️ **Development-Only** - Zero production overhead, only runs in dev mode
+- 🔒 **HTTPS Support** - Works seamlessly with HTTPS dev servers via automatic WebSocket proxy
 
 ## Quick Start
 
@@ -44,6 +45,8 @@ export default defineConfig({
 });
 ```
 
+The WebSocket proxy is automatically configured for both HTTP and HTTPS development servers.
+
 </details>
 
 <details>
@@ -63,6 +66,8 @@ export default {
 };
 ```
 
+The WebSocket proxy is automatically configured in webpack-dev-server.
+
 </details>
 
 <details>
@@ -81,6 +86,33 @@ export default {
   ],
 };
 ```
+
+The WebSocket proxy is automatically configured in rspack-dev-server.
+
+</details>
+
+<details>
+<summary><b>Farm</b></summary>
+
+```ts
+// farm.config.ts
+import DomInspector from 'devpilot-plugin-dom-inspector';
+import Devpilot, { getProxyConfig } from 'unplugin-devpilot/farm';
+
+// Note: wsPort is the WebSocket server port (obtained from console output)
+export default defineConfig({
+  plugins: [
+    Devpilot({
+      plugins: [DomInspector],
+    }),
+  ],
+  server: {
+    proxy: getProxyConfig(60427),
+  },
+});
+```
+
+Farm requires manual proxy configuration. The `getProxyConfig(wsPort)` helper generates the correct proxy settings. The actual `wsPort` will be logged to the console when the dev server starts.
 
 </details>
 
@@ -159,10 +191,17 @@ Debug and inspect web applications with real-time server communication.
 │           │ WebSocket          │ RPC       │
 └───────────┼────────────────────┼───────────┘
             │                    │
+            │   WSS (via dev     │   WS (direct)
+            │   server proxy)    │
 ┌───────────┼────────────────────┼──────────┐
 │           ▼                    ▼          │
 │  ┌─────────────────────────────────────┐  │
 │  │    Development Server (Node.js)     │  │
+│  │  ┌──────────────────────────────┐   │  │
+│  │  │  WebSocket Proxy             │   │  │
+│  │  │  (auto-configured for all    │   │  │
+│  │  │   bundlers)                  │   │  │
+│  │  └──────────────────────────────┘   │  │
 │  │  ┌──────────────────────────────┐   │  │
 │  │  │  WebSocket Server (:3100)    │   │  │
 │  │  │  - Client Management         │   │  │
@@ -344,21 +383,27 @@ pnpm typecheck
 
 ### Port Configuration
 
-The plugin automatically manages port allocation to prevent conflicts:
+The plugin automatically manages port allocation internally:
 
 ```ts
 Devpilot({
-  wsPort: 3100, // Optional: WebSocket server port (random if not specified)
-  mcpPort: 3101, // Optional: MCP server port (random if occupied)
+  mcpPort: 3101, // Optional: MCP server port (defaults to 3101)
   plugins: [/* ... */],
 });
 ```
 
-**Port Allocation Strategy:**
-- **wsPort**: When provided, the specified port is used if available; otherwise, a random available port is allocated. When not provided, a random available port is automatically allocated. This ensures no port conflicts.
-- **mcpPort**: When not provided, defaults to 3101. If the port is already in use, an error will be thrown.
+**Port Allocation:**
+- **WebSocket**: Port is automatically allocated internally. The WebSocket connection is proxied through the dev server (via `/__devpilot_ws`), so it works seamlessly with both HTTP and HTTPS.
+- **MCP**: Defaults to port 3101. If occupied, specify a different port or free up the occupied port.
 
-This ensures your MCP server runs on a predictable port. If the default port is occupied, you'll need to specify a different port or free up the occupied port.
+### HTTPS Support
+
+The plugin automatically works with HTTPS development servers (e.g., using `unplugin-https-reverse-proxy` or Vite's built-in HTTPS). The WebSocket connection is proxied through the dev server using the same protocol:
+
+- **HTTP pages**: Connects via `ws://` (WebSocket)
+- **HTTPS pages**: Connects via `wss://` (Secure WebSocket)
+
+No additional configuration is required for HTTPS support.
 
 ### Plugin Options
 Each plugin can be configured based on its implementation. Refer to individual plugin documentation.
@@ -374,8 +419,8 @@ Each plugin can be configured based on its implementation. Refer to individual p
 
 ### WebSocket Connection Failed
 - Ensure development server is running
-- Check if port 3100 is not blocked by firewall
-- Verify `wsPort` configuration matches
+- For HTTPS servers, ensure the certificate is trusted by your browser
+- Check browser console for connection errors
 
 ### MCP Tools Not Available
 - Confirm plugins are registered in configuration

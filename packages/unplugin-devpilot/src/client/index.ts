@@ -1,5 +1,6 @@
 import type { ServerFunctions } from '../core/types';
 import type { DevpilotClient, DevpilotClientOptions, RpcHandlers } from './types';
+import { WS_PROXY_PATH } from '../core/constants';
 
 export type { DevpilotClient, DevpilotClientOptions, RpcHandlers };
 export type { ClientStorage } from './storage';
@@ -78,7 +79,7 @@ function showWebSocketError() {
 export function createDevpilotClient<S extends Record<string, any> = ServerFunctions>(
   options: DevpilotClientOptions,
 ): DevpilotClient<S> {
-  const { wsPort, rpcHandlers: customHandlers } = options;
+  const { rpcHandlers: customHandlers } = options;
 
   let ws: WebSocket | null = null;
   let clientId: string | null = null;
@@ -105,10 +106,14 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
   } as RpcHandlers;
 
   function connect(): void {
-    // Use location.hostname to support LAN debugging (not hardcoded localhost)
-    // Always use ws:// (not wss://) as the WebSocket server doesn't support WSS
-    const host = location.hostname;
-    ws = new WebSocket(`ws://${host}:${wsPort}`);
+    // Always use proxy path for WebSocket connection
+    // This works for both HTTP and HTTPS pages
+    const protocol = location.protocol === 'https:'
+      ? 'wss:'
+      : 'ws:';
+    const wsUrl = `${protocol}//${location.host}${WS_PROXY_PATH}`;
+
+    ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log('[devpilot] Connected to server');

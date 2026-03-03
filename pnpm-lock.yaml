@@ -99,6 +99,9 @@ importers:
       '@nuxt/schema':
         specifier: ^3
         version: 3.21.1
+      '@types/http-proxy':
+        specifier: ^1.17.17
+        version: 1.17.17
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
@@ -114,6 +117,9 @@ importers:
       hookable:
         specifier: ^6.0.1
         version: 6.0.1
+      http-proxy:
+        specifier: ^1.18.1
+        version: 1.18.1(debug@4.4.3)
       mitt:
         specifier: ^3.0.1
         version: 3.0.1

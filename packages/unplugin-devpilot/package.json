@@ -88,11 +88,13 @@
   "dependencies": {
     "@code-inspector/core": "^1.4.2",
     "@modelcontextprotocol/sdk": "^1.25.3",
+    "@types/http-proxy": "^1.17.17",
     "@types/ws": "^8.18.1",
     "birpc": "^4.0.0",
     "es-toolkit": "^1.44.0",
     "get-port-please": "^3.2.0",
     "hookable": "^6.0.1",
+    "http-proxy": "^1.18.1",
     "mitt": "^3.0.1",
     "unplugin": "^3.0.0",
     "unstorage": "^1.17.4",
