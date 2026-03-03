@@ -1,5 +1,6 @@
 import type { DevpilotPluginContext, McpToolRegister } from './plugin';
 import { checkPort, getRandomPort } from 'get-port-please';
+
 export { WS_PROXY_PATH } from './constants';
 
 let lastResolvedWsPort: number | undefined;

@@ -1,9 +1,9 @@
 import type { UnpluginInstance } from 'unplugin';
 import type { DevpilotPlugin, Options, OptionsResolved } from './core/options';
-import { WS_PROXY_PATH } from './core/constants';
 import process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { injectSourceLocation } from './core/code-location-injector';
+import { WS_PROXY_PATH } from './core/constants';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
 import { generateCoreSkill } from './core/skill-generator';
@@ -104,7 +104,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
     const name = 'unplugin-devpilot';
 
     async function ensureServersStarted(): Promise<OptionsResolved | null> {
-      if (options) return options;
+      if (options) { return options; }
       options = await startServers(rawOptions);
       return options;
     }
@@ -171,7 +171,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           if (isTestEnvironment()) { return; }
           isDevServer = true;
           const opts = await ensureServersStarted();
-          if (!opts) return;
+          if (!opts) { return; }
 
           // Auto-configure WebSocket proxy
           const wsUrl = `ws://localhost:${opts.wsPort}`;
@@ -196,7 +196,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         compiler.hooks.beforeRun.tapPromise(name, async () => {
           isDevServer = true;
           const opts = await ensureServersStarted();
-          if (!opts) return;
+          if (!opts) { return; }
 
           // Inject proxy config into devServer options
           compiler.options.devServer = compiler.options.devServer || {};
@@ -213,7 +213,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           if (devServer.proxy === undefined) {
             // No proxy config, create array
             devServer.proxy = [proxyConfig];
-          } else if (Array.isArray(devServer.proxy)) {
+          }
+          else if (Array.isArray(devServer.proxy)) {
             // Already an array, check if already exists
             const existingProxy = devServer.proxy.find(
               (p: any) => p && (p.context === WS_PROXY_PATH || p.path === WS_PROXY_PATH),
@@ -221,10 +222,11 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
             if (!existingProxy) {
               devServer.proxy.push(proxyConfig);
             }
-          } else if (typeof devServer.proxy === 'object' && devServer.proxy !== null) {
+          }
+          else if (typeof devServer.proxy === 'object' && devServer.proxy !== null) {
             // Convert object to array
             const existingKeys = Object.keys(devServer.proxy);
-            const hasExisting = existingKeys.some(key => key === WS_PROXY_PATH);
+            const hasExisting = existingKeys.includes(WS_PROXY_PATH);
             if (!hasExisting) {
               // Convert to array
               const proxyArray = existingKeys.map(key => ({
@@ -250,7 +252,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         compiler.hooks.beforeRun.tapPromise(name, async () => {
           isDevServer = true;
           const opts = await ensureServersStarted();
-          if (!opts) return;
+          if (!opts) { return; }
 
           compiler.options.devServer = compiler.options.devServer || {};
           const devServer = compiler.options.devServer as Record<string, any>;
@@ -266,7 +268,8 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           if (devServer.proxy === undefined) {
             // No proxy config, create array
             devServer.proxy = [proxyConfig];
-          } else if (Array.isArray(devServer.proxy)) {
+          }
+          else if (Array.isArray(devServer.proxy)) {
             // Already an array, check if already exists
             const existingProxy = devServer.proxy.find(
               (p: any) => p && (p.context === WS_PROXY_PATH || p.path === WS_PROXY_PATH),
@@ -274,10 +277,11 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
             if (!existingProxy) {
               devServer.proxy.push(proxyConfig);
             }
-          } else if (typeof devServer.proxy === 'object' && devServer.proxy !== null) {
+          }
+          else if (typeof devServer.proxy === 'object' && devServer.proxy !== null) {
             // Convert object to array
             const existingKeys = Object.keys(devServer.proxy);
-            const hasExisting = existingKeys.some(key => key === WS_PROXY_PATH);
+            const hasExisting = existingKeys.includes(WS_PROXY_PATH);
             if (!hasExisting) {
               // Convert to array
               const proxyArray = existingKeys.map(key => ({
@@ -302,7 +306,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         async configureDevServer() {
           isDevServer = true;
           const opts = await ensureServersStarted();
-          if (!opts) return;
+          if (!opts) { return; }
 
           console.warn(`[unplugin-devpilot] Farm dev server proxy requires manual configuration.
 Add the following to your farm.config.ts:
@@ -357,7 +361,7 @@ export { resolveModule } from './core/utils';
  */
 export function getProxyConfig(
   wsPort: number,
-): Record<string, { target: string; ws: boolean; changeOrigin: boolean }> {
+): Record<string, { target: string, ws: boolean, changeOrigin: boolean }> {
   return {
     [WS_PROXY_PATH]: {
       target: `ws://localhost:${wsPort}`,
