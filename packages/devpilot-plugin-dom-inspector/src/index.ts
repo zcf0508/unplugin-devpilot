@@ -13,7 +13,7 @@ function generateClientNotFoundErrorSuggestions(
   suggestions.push(`Client "${targetClientId}" not found or disconnected.`);
 
   // Check if client was recently active
-  const allClients = clientManager.getAllClients(false); // Include inactive clients
+  const allClients = clientManager.getAllClients(); // Include inactive clients
   const historicalClient = allClients.find(c => c.clientId === targetClientId);
 
   if (historicalClient) {

@@ -298,15 +298,3 @@ async function copyPluginSkillFile(sourcePath: string, destPath: string): Promis
     return false;
   }
 }
-
-/**
- * Represents a skill path with type information
- */
-export interface SkillPathInfo {
-  /** The type of the skill path */
-  type: 'file' | 'npm' | 'relative'
-  /** The actual path or identifier */
-  path: string
-  /** The namespace of the plugin (if applicable) */
-  namespace?: string
-}

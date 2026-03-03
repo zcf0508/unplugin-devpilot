@@ -28,6 +28,7 @@ export class ClientManager {
       userAgent: '',
       connectedAt: now,
       lastActiveAt: now,
+      active: true,
     };
     this.clients.set(clientId, { ws, info, rpc });
     return info;
@@ -48,20 +49,21 @@ export class ClientManager {
     return this.clients.get(clientId) as ClientConnection<T> | undefined;
   }
 
-  getAllClients(activeOnly = true): ClientInfo[] {
-    const clients = Array.from(this.clients.values()).map(c => c.info);
-    if (activeOnly) {
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      return clients.filter(c => c.lastActiveAt > fiveMinutesAgo);
-    }
-    return clients;
+  getAllClients(): ClientInfo[] {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    return Array.from(this.clients.values()).map((c) => {
+      return {
+        ...c.info,
+        active: c.info.lastActiveAt > fiveMinutesAgo,
+      };
+    });
   }
 
   /**
    * Find clients by URL pattern or other filters
    */
   findClients(filter: ClientDiscoveryFilter): ClientInfo[] {
-    const clients = this.getAllClients(filter.activeOnly ?? true);
+    const clients = this.getAllClients();
 
     return clients.filter((client) => {
       // Filter by clientId if specified
@@ -96,7 +98,7 @@ export class ClientManager {
    */
   getClientsByUrl(): Record<string, ClientInfo[]> {
     const result: Record<string, ClientInfo[]> = {};
-    const clients = this.getAllClients(true);
+    const clients = this.getAllClients();
 
     for (const client of clients) {
       const url = client.url || 'unknown';

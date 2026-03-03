@@ -10,7 +10,6 @@ const listClients = defineMcpToolRegister(
     title: 'List Clients',
     description: 'List all connected browser instances with optional filtering by URL, title, or clientId',
     inputSchema: {
-      activeOnly: z.boolean().optional().default(false).describe('Only list active clients'),
       urlPattern: z.string().optional().describe('Filter clients by URL pattern (substring match, case-insensitive)'),
       titlePattern: z.string().optional().describe('Filter clients by page title pattern (substring match, case-insensitive)'),
       clientId: z.string().optional().describe('Filter by specific client ID'),
@@ -19,7 +18,6 @@ const listClients = defineMcpToolRegister(
   },
   async (params) => {
     const filter: ClientDiscoveryFilter = {
-      activeOnly: params.activeOnly,
       urlPattern: params.urlPattern,
       titlePattern: params.titlePattern,
       clientId: params.clientId,
@@ -49,7 +47,6 @@ const listClients = defineMcpToolRegister(
       result.suggestions = [
         'No clients found. Make sure the browser has the devpilot extension loaded.',
         'Try refreshing the browser page to reconnect.',
-        'Use activeOnly=false to see recently disconnected clients.',
       ];
 
       if (params.urlPattern) {

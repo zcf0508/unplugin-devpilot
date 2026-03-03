@@ -5,6 +5,7 @@ export interface ClientInfo {
   userAgent: string
   connectedAt: number
   lastActiveAt: number
+  active: boolean
 }
 
 export interface TaskHistory {
@@ -34,7 +35,6 @@ export interface ClientDiscoveryFilter {
   urlPattern?: string
   titlePattern?: string
   clientId?: string
-  activeOnly?: boolean
 }
 
 export interface PendingTask {
