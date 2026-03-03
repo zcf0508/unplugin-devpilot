@@ -331,7 +331,7 @@ process.on('beforeExit', () => {
 export { clientManager } from './core/client-manager';
 export type { DevpilotPlugin, Options } from './core/options';
 export default unpluginDevpilot;
-export type { DevpilotPluginContext } from './core/plugin';
+export type { DevpilotPluginContext, McpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
 export { defineMcpToolRegister, type McpToolResolved } from './core/plugin/mcp';
 export { resolveSkillModule } from './core/skill-generator';
