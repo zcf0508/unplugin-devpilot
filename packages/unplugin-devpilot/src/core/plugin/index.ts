@@ -27,4 +27,4 @@ export function resolveClientModule(importMetaUrl: string, relativePath: string)
   return resolveModule(importMetaUrl, relativePath);
 }
 
-export type { McpToolRegister, McpToolResolved } from './mcp';
+export type { McpToolRegister, McpToolRegisterTyped, McpToolResolved } from './mcp';

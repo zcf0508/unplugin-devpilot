@@ -11,7 +11,7 @@ import { getPluginStorage } from './storage';
 let httpServer: Server | null = null;
 
 // Store plugin server methods
-let mcpRegeisterMethods: Record<string, McpToolRegister[]> = {};
+let mcpRegeisterMethods: Record<string, (() => McpToolRegister)[]> = {};
 
 /**
  * Register plugin server methods
