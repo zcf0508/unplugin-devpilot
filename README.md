@@ -274,6 +274,47 @@ export default {
 } satisfies DevpilotPlugin;
 ```
 
+### Skill File
+
+Plugins can provide a `skillModule` to help LLMs understand and use the plugin's capabilities. This is a markdown file or folder that describes the plugin's purpose, available tools, and usage patterns.
+
+```ts
+import type { DevpilotPlugin } from 'unplugin-devpilot';
+import { resolveModule } from 'unplugin-devpilot';
+
+export default {
+  namespace: 'my-plugin',
+  clientModule: resolveClientModule(import.meta.url, './client/index.mjs'),
+  skillModule: resolveModule(import.meta.url, './skill.md'), // or './skills' for a folder
+  // ...
+} satisfies DevpilotPlugin;
+```
+
+**Single File Mode:**
+
+```ts
+skillModule: resolveModule(import.meta.url, './skill.md')
+```
+
+The skill file is copied to the output directory as `{namespace}.md`.
+
+**Folder Mode:**
+
+```ts
+skillModule: resolveModule(import.meta.url, './skills')
+```
+
+When using a folder:
+- If `index.md` exists, the link points to `{namespace}/index.md`
+- If no `index.md`, the link points to `{namespace}/` and LLM explores the folder
+- All files in the folder are copied recursively
+
+**Skill File Guidelines:**
+
+- Keep under 100 lines for core instructions
+- Include tool descriptions, parameters, and usage examples
+- For complex plugins, use folder mode with multiple `.md` files
+
 ### Plugin Storage
 
 Each plugin gets a **namespaced storage** instance (powered by [unstorage](https://github.com/unjs/unstorage)) via `ctx.storage`, available in both `serverSetup` and `mcpSetup`. Storage is isolated per plugin namespace, so plugins won't interfere with each other.

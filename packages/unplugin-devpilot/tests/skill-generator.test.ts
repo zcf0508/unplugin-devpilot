@@ -240,51 +240,6 @@ describe('skill-generator', () => {
       `);
     });
 
-    it('should handle plugin with npm package skill path', async () => {
-      const mockPlugin = {
-        namespace: 'npm-plugin',
-        skillModule: 'npm:my-plugin/skill.md',
-      };
-
-      mockOptions.plugins = [mockPlugin as any];
-
-      await generateCoreSkill(mockOptions, true);
-
-      expect(fs.writeFile).toHaveBeenCalled();
-
-      const writeFileCall = (fs.writeFile as any).mock.calls[0];
-      expect(writeFileCall[1]).toMatchInlineSnapshot(`
-        "---
-        name: devpilot
-        description: Devpilot core skill that aggregates all plugin skills for web application interaction and debugging.
-        allowed-tools: [
-          "list_clients",
-          "get_pending_tasks",
-          "get_task_history"
-        ]
-        ---
-
-        # Devpilot Core Skills
-
-        This is the core skill file that aggregates all plugin skills.
-
-        ## Available Skills
-
-        - [npm-plugin](npm:my-plugin/skill.md) - npm-plugin capabilities
-
-        ## Usage
-
-        These skills can be used with Claude Agent to interact with web applications.
-
-        ## Configuration
-
-        - **Plugins**: 1
-        - **WebSocket Port**: 3100
-        - **MCP Port**: 3101
-        "
-      `);
-    });
-
     it('should handle plugin with relative skill path', async () => {
       const mockPlugin = {
         namespace: 'relative-plugin',

@@ -273,6 +273,47 @@ export default {
 } satisfies DevpilotPlugin;
 ```
 
+### Skill 文件
+
+插件可以提供 `skillModule` 来帮助 LLM 理解和使用插件的功能。这是一个 Markdown 文件或文件夹，用于描述插件的用途、可用工具和使用方式。
+
+```ts
+import type { DevpilotPlugin } from 'unplugin-devpilot';
+import { resolveModule } from 'unplugin-devpilot';
+
+export default {
+  namespace: 'my-plugin',
+  clientModule: resolveClientModule(import.meta.url, './client/index.mjs'),
+  skillModule: resolveModule(import.meta.url, './skill.md'), // 或 './skills' 文件夹
+  // ...
+} satisfies DevpilotPlugin;
+```
+
+**单文件模式：**
+
+```ts
+skillModule: resolveModule(import.meta.url, './skill.md')
+```
+
+Skill 文件会被复制到输出目录，命名为 `{namespace}.md`。
+
+**文件夹模式：**
+
+```ts
+skillModule: resolveModule(import.meta.url, './skills')
+```
+
+使用文件夹时：
+- 如果存在 `index.md`，链接指向 `{namespace}/index.md`
+- 如果没有 `index.md`，链接指向 `{namespace}/`，由 LLM 自行探索文件夹内容
+- 文件夹中的所有文件会被递归复制
+
+**Skill 文件编写建议：**
+
+- 核心指令保持在 100 行以内
+- 包含工具描述、参数说明和使用示例
+- 对于复杂插件，使用文件夹模式组织多个 `.md` 文件
+
 ### 插件存储
 
 每个插件通过 `ctx.storage` 获得一个**命名空间隔离的存储**实例（基于 [unstorage](https://github.com/unjs/unstorage)），在 `serverSetup` 和 `mcpSetup` 中均可使用。各插件的存储互相隔离，不会冲突。

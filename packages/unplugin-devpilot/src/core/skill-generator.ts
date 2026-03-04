@@ -85,11 +85,11 @@ function getCoreSkillFilePath(skillPath: string): string {
 
 /**
  * Get all plugin skill modules
+ * Supports file:// URLs (from resolveModule) and direct paths (relative/absolute)
  */
 async function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolved): Promise<Array<{
   namespace: string
   path: string
-  originalSkillModule: string
   isDirectory: boolean
   hasIndexMd: boolean
 }>> {
@@ -102,32 +102,19 @@ async function getPluginSkillModules(plugins: DevpilotPlugin[], options: Options
       ? p.skillModule(ctx)
       : p.skillModule!;
 
-    // Convert file URL back to path or handle npm package paths
-    let skillPath: string;
-    if (mod.startsWith('file://')) {
-      // File URL - convert to path
-      skillPath = fileURLToPath(mod);
-    }
-    else if (mod.startsWith('npm:') || (!mod.startsWith('.') && !mod.startsWith('/') && (mod.includes('/') || mod.match(/^[@a-z0-9]\S+$/i)))) {
-      // npm package path - keep as-is
-      // Supports: 'npm:my-plugin/skill', 'my-plugin/skill', '@scope/package/skill'
-      skillPath = mod;
-    }
-    else {
-      // Relative path - convert to absolute path
-      // This handles cases where skillModule returns a relative path directly
-      skillPath = mod;
-    }
+    // Handle file:// URLs or direct paths
+    const skillPath = mod.startsWith('file://')
+      ? fileURLToPath(mod)
+      : mod;
 
-    // Check if it's a directory (only for file paths, not npm packages)
-    const isDir = !skillPath.startsWith('npm:') && await isDirectory(skillPath);
+    // Check if it's a directory
+    const isDir = await isDirectory(skillPath);
     // Check if index.md exists (only for directories)
     const hasIndex = isDir && await hasIndexMd(skillPath);
 
     results.push({
       namespace: p.namespace,
       path: skillPath,
-      originalSkillModule: mod,
       isDirectory: isDir,
       hasIndexMd: hasIndex,
     });
@@ -181,36 +168,19 @@ async function generateCoreSkillContent(options: OptionsResolved, isDev: boolean
   const pluginSkills = await getPluginSkillModules(options.plugins, options);
 
   const skillList = pluginSkills.map((skill) => {
-    if (skill.originalSkillModule.startsWith('file://')) {
-      // For directories with index.md, link to index.md
-      // For directories without index.md, link to the folder itself (let LLM find the entry)
-      // For files, link to the namespace.md file
-      let linkPath: string;
-      if (skill.isDirectory) {
-        linkPath = skill.hasIndexMd
-          ? `./${skill.namespace}/index.md`
-          : `./${skill.namespace}/`;
-      }
-      else {
-        linkPath = `./${skill.namespace}.md`;
-      }
-      return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
-    }
-    else if (skill.originalSkillModule.startsWith('npm:') || (!skill.originalSkillModule.startsWith('.') && !skill.originalSkillModule.startsWith('/') && (skill.originalSkillModule.includes('/') || skill.originalSkillModule.match(/^[@a-z0-9]\S+$/i)))) {
-      return `- [${skill.namespace}](${skill.originalSkillModule}) - ${skill.namespace} capabilities`;
+    // For directories with index.md, link to index.md
+    // For directories without index.md, link to the folder itself (let LLM find the entry)
+    // For files, link to the namespace.md file
+    let linkPath: string;
+    if (skill.isDirectory) {
+      linkPath = skill.hasIndexMd
+        ? `./${skill.namespace}/index.md`
+        : `./${skill.namespace}/`;
     }
     else {
-      let linkPath: string;
-      if (skill.isDirectory) {
-        linkPath = skill.hasIndexMd
-          ? `./${skill.namespace}/index.md`
-          : `./${skill.namespace}/`;
-      }
-      else {
-        linkPath = `./${skill.namespace}.md`;
-      }
-      return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
+      linkPath = `./${skill.namespace}.md`;
     }
+    return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
   }).join('\n');
 
   const frontmatter = generateFrontmatter(options);
@@ -254,20 +224,18 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
 
     if (!isDev || !content) {
       for (const skill of pluginSkills) {
-        if (skill.originalSkillModule.startsWith('file://')) {
-          try {
-            if (skill.isDirectory) {
-              // Remove the entire directory for folder-based skills
-              await fs.rm(join(dir, skill.namespace), { recursive: true, force: true });
-            }
-            else {
-              // Remove single file
-              await fs.unlink(join(dir, `${skill.namespace}.md`));
-            }
+        try {
+          if (skill.isDirectory) {
+            // Remove the entire directory for folder-based skills
+            await fs.rm(join(dir, skill.namespace), { recursive: true, force: true });
           }
-          catch {
-            // File/directory doesn't exist
+          else {
+            // Remove single file
+            await fs.unlink(join(dir, `${skill.namespace}.md`));
           }
+        }
+        catch {
+          // File/directory doesn't exist
         }
       }
       try {
@@ -282,15 +250,13 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
     await fs.mkdir(dir, { recursive: true });
 
     for (const skill of pluginSkills) {
-      if (skill.originalSkillModule.startsWith('file://')) {
-        if (skill.isDirectory) {
-          // Copy entire directory
-          await copyDirectory(skill.path, join(dir, skill.namespace));
-        }
-        else {
-          // Copy single file
-          await copyPluginSkillFile(skill.path, join(dir, `${skill.namespace}.md`));
-        }
+      if (skill.isDirectory) {
+        // Copy entire directory
+        await copyDirectory(skill.path, join(dir, skill.namespace));
+      }
+      else {
+        // Copy single file
+        await copyPluginSkillFile(skill.path, join(dir, `${skill.namespace}.md`));
       }
     }
 
