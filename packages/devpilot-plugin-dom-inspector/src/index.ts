@@ -1,6 +1,6 @@
 import type { DevpilotPlugin } from 'unplugin-devpilot';
 import type { ConsoleLogEntry, DomInspectorRpc, DomInspectorServerMethods } from './shared-types';
-import { clientManager, defineMcpToolRegister, resolveClientModule } from 'unplugin-devpilot';
+import { clientManager, defineMcpToolRegister, resolveClientModule, resolveModule } from 'unplugin-devpilot';
 import { z } from 'zod';
 
 // Helper function to generate intelligent error suggestions when client is not found
@@ -493,5 +493,5 @@ export default <DevpilotPlugin>{
 
     return tools;
   },
-  skillModule: resolveClientModule(import.meta.url, './skill.md'),
+  skillModule: resolveModule(import.meta.url, './skill.md'),
 };

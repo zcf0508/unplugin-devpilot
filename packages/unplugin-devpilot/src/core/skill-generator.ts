@@ -8,6 +8,36 @@ import { getPluginStorage } from './storage';
 import { resolveModule } from './utils';
 
 /**
+ * Check if a path is a directory
+ * @param path - The path to check
+ * @returns true if the path is a directory
+ */
+async function isDirectory(path: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(path);
+    return stat.isDirectory();
+  }
+  catch {
+    return false;
+  }
+}
+
+/**
+ * Check if index.md exists in a directory
+ * @param dirPath - The directory path to check
+ * @returns true if index.md exists
+ */
+async function hasIndexMd(dirPath: string): Promise<boolean> {
+  try {
+    await fs.access(join(dirPath, 'index.md'));
+    return true;
+  }
+  catch {
+    return false;
+  }
+}
+
+/**
  * Resolve the skill module path relative to the plugin to an absolute path
  * Handles cross-platform paths (Windows, macOS, Linux) and proper escaping for imports
  * @param importMetaUrl - Pass in import.meta.url
@@ -56,42 +86,53 @@ function getCoreSkillFilePath(skillPath: string): string {
 /**
  * Get all plugin skill modules
  */
-function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolved): Array<{
+async function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolved): Promise<Array<{
   namespace: string
   path: string
   originalSkillModule: string
-}> {
-  return plugins
-    .filter(p => p.skillModule)
-    .map((p) => {
-      const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
-      const mod = typeof p.skillModule === 'function'
-        ? p.skillModule(ctx)
-        : p.skillModule!;
+  isDirectory: boolean
+  hasIndexMd: boolean
+}>> {
+  const results = [];
+  for (const p of plugins) {
+    if (!p.skillModule) { continue; }
 
-      // Convert file URL back to path or handle npm package paths
-      let skillPath: string;
-      if (mod.startsWith('file://')) {
-        // File URL - convert to path
-        skillPath = fileURLToPath(mod);
-      }
-      else if (mod.startsWith('npm:') || (!mod.startsWith('.') && !mod.startsWith('/') && (mod.includes('/') || mod.match(/^[@a-z0-9]\S+$/i)))) {
-        // npm package path - keep as-is
-        // Supports: 'npm:my-plugin/skill', 'my-plugin/skill', '@scope/package/skill'
-        skillPath = mod;
-      }
-      else {
-        // Relative path - convert to absolute path
-        // This handles cases where skillModule returns a relative path directly
-        skillPath = mod;
-      }
+    const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
+    const mod = typeof p.skillModule === 'function'
+      ? p.skillModule(ctx)
+      : p.skillModule!;
 
-      return {
-        namespace: p.namespace,
-        path: skillPath,
-        originalSkillModule: mod,
-      };
+    // Convert file URL back to path or handle npm package paths
+    let skillPath: string;
+    if (mod.startsWith('file://')) {
+      // File URL - convert to path
+      skillPath = fileURLToPath(mod);
+    }
+    else if (mod.startsWith('npm:') || (!mod.startsWith('.') && !mod.startsWith('/') && (mod.includes('/') || mod.match(/^[@a-z0-9]\S+$/i)))) {
+      // npm package path - keep as-is
+      // Supports: 'npm:my-plugin/skill', 'my-plugin/skill', '@scope/package/skill'
+      skillPath = mod;
+    }
+    else {
+      // Relative path - convert to absolute path
+      // This handles cases where skillModule returns a relative path directly
+      skillPath = mod;
+    }
+
+    // Check if it's a directory (only for file paths, not npm packages)
+    const isDir = !skillPath.startsWith('npm:') && await isDirectory(skillPath);
+    // Check if index.md exists (only for directories)
+    const hasIndex = isDir && await hasIndexMd(skillPath);
+
+    results.push({
+      namespace: p.namespace,
+      path: skillPath,
+      originalSkillModule: mod,
+      isDirectory: isDir,
+      hasIndexMd: hasIndex,
     });
+  }
+  return results;
 }
 
 function collectAllowedTools(plugins: DevpilotPlugin[], options: OptionsResolved): string[] {
@@ -132,23 +173,42 @@ ${toolsYaml}
 /**
  * Generate the core skill markdown content
  */
-function generateCoreSkillContent(options: OptionsResolved, isDev: boolean): string {
+async function generateCoreSkillContent(options: OptionsResolved, isDev: boolean): Promise<string> {
   if (!isDev) {
     return '';
   }
 
-  const pluginSkills = getPluginSkillModules(options.plugins, options);
+  const pluginSkills = await getPluginSkillModules(options.plugins, options);
 
   const skillList = pluginSkills.map((skill) => {
     if (skill.originalSkillModule.startsWith('file://')) {
-      const linkPath = `./${skill.namespace}.md`;
+      // For directories with index.md, link to index.md
+      // For directories without index.md, link to the folder itself (let LLM find the entry)
+      // For files, link to the namespace.md file
+      let linkPath: string;
+      if (skill.isDirectory) {
+        linkPath = skill.hasIndexMd
+          ? `./${skill.namespace}/index.md`
+          : `./${skill.namespace}/`;
+      }
+      else {
+        linkPath = `./${skill.namespace}.md`;
+      }
       return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
     }
     else if (skill.originalSkillModule.startsWith('npm:') || (!skill.originalSkillModule.startsWith('.') && !skill.originalSkillModule.startsWith('/') && (skill.originalSkillModule.includes('/') || skill.originalSkillModule.match(/^[@a-z0-9]\S+$/i)))) {
       return `- [${skill.namespace}](${skill.originalSkillModule}) - ${skill.namespace} capabilities`;
     }
     else {
-      const linkPath = `./${skill.namespace}.md`;
+      let linkPath: string;
+      if (skill.isDirectory) {
+        linkPath = skill.hasIndexMd
+          ? `./${skill.namespace}/index.md`
+          : `./${skill.namespace}/`;
+      }
+      else {
+        linkPath = `./${skill.namespace}.md`;
+      }
       return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
     }
   }).join('\n');
@@ -185,8 +245,8 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
     return;
   }
 
-  const content = generateCoreSkillContent(options, isDev);
-  const pluginSkills = getPluginSkillModules(options.plugins, options);
+  const content = await generateCoreSkillContent(options, isDev);
+  const pluginSkills = await getPluginSkillModules(options.plugins, options);
 
   for (const skillPath of options.skillPaths) {
     const skillFilePath = getCoreSkillFilePath(skillPath);
@@ -196,10 +256,17 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
       for (const skill of pluginSkills) {
         if (skill.originalSkillModule.startsWith('file://')) {
           try {
-            await fs.unlink(join(dir, `${skill.namespace}.md`));
+            if (skill.isDirectory) {
+              // Remove the entire directory for folder-based skills
+              await fs.rm(join(dir, skill.namespace), { recursive: true, force: true });
+            }
+            else {
+              // Remove single file
+              await fs.unlink(join(dir, `${skill.namespace}.md`));
+            }
           }
           catch {
-            // File doesn't exist
+            // File/directory doesn't exist
           }
         }
       }
@@ -216,7 +283,14 @@ export async function generateCoreSkill(options: OptionsResolved, isDev: boolean
 
     for (const skill of pluginSkills) {
       if (skill.originalSkillModule.startsWith('file://')) {
-        await copyPluginSkillFile(skill.path, join(dir, `${skill.namespace}.md`));
+        if (skill.isDirectory) {
+          // Copy entire directory
+          await copyDirectory(skill.path, join(dir, skill.namespace));
+        }
+        else {
+          // Copy single file
+          await copyPluginSkillFile(skill.path, join(dir, `${skill.namespace}.md`));
+        }
       }
     }
 
@@ -293,6 +367,45 @@ async function copyPluginSkillFile(sourcePath: string, destPath: string): Promis
       return true;
     }
     return false;
+  }
+  catch {
+    return false;
+  }
+}
+
+/**
+ * Copy a directory recursively from source to destination
+ * @param sourceDir - Source directory path
+ * @param destDir - Destination directory path
+ * @returns true if any files were copied or updated
+ */
+async function copyDirectory(sourceDir: string, destDir: string): Promise<boolean> {
+  let changed = false;
+
+  try {
+    // Ensure destination directory exists
+    await fs.mkdir(destDir, { recursive: true });
+
+    // Read source directory
+    const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const sourcePath = join(sourceDir, entry.name);
+      const destPath = join(destDir, entry.name);
+
+      if (entry.isDirectory()) {
+        // Recursively copy subdirectories
+        const subDirChanged = await copyDirectory(sourcePath, destPath);
+        if (subDirChanged) { changed = true; }
+      }
+      else if (entry.isFile()) {
+        // Copy file
+        const fileChanged = await copyPluginSkillFile(sourcePath, destPath);
+        if (fileChanged) { changed = true; }
+      }
+    }
+
+    return changed;
   }
   catch {
     return false;
