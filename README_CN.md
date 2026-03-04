@@ -292,7 +292,7 @@ export default {
 **单文件模式：**
 
 ```ts
-skillModule: resolveModule(import.meta.url, './skill.md')
+skillModule: resolveModule(import.meta.url, './skill.md');
 ```
 
 Skill 文件会被复制到输出目录，命名为 `{namespace}.md`。
@@ -300,7 +300,7 @@ Skill 文件会被复制到输出目录，命名为 `{namespace}.md`。
 **文件夹模式：**
 
 ```ts
-skillModule: resolveModule(import.meta.url, './skills')
+skillModule: resolveModule(import.meta.url, './skills');
 ```
 
 使用文件夹时：

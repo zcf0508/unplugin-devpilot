@@ -293,7 +293,7 @@ export default {
 **Single File Mode:**
 
 ```ts
-skillModule: resolveModule(import.meta.url, './skill.md')
+skillModule: resolveModule(import.meta.url, './skill.md');
 ```
 
 The skill file is copied to the output directory as `{namespace}.md`.
@@ -301,7 +301,7 @@ The skill file is copied to the output directory as `{namespace}.md`.
 **Folder Mode:**
 
 ```ts
-skillModule: resolveModule(import.meta.url, './skills')
+skillModule: resolveModule(import.meta.url, './skills');
 ```
 
 When using a folder:
