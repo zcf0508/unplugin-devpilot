@@ -1,0 +1,27 @@
+packages/unplugin-devpilot/src/core/skill-generator.ts
+  5b9956828af14e84 88,105-108,183,232-234,237-238
+README_CN.md
+  5b9956828af14e84 276-316
+README.md
+  5b9956828af14e84 277-317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.8",
+  "base_commit_sha": "a85acc45b7d42acb9085d7b68522acca6c88cade",
+  "prompts": {
+    "5b9956828af14e84": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82c2f9f8-c3b6-4e02-85c4-34408986960b",
+        "model": "kimi-k2.5"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 114,
+      "total_deletions": 96,
+      "accepted_lines": 94,
+      "overriden_lines": 0
+    }
+  }
+}
