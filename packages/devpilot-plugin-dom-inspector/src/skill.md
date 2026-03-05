@@ -15,61 +15,74 @@ allowed-tools: [
 
 # DOM Inspector Skill
 
-Navigate, understand, and interact with web pages in DevPilot.
+> **Core Principle: Minimize token cost.** Always choose the cheapest tool that gets the job done.
 
-## ⚠️ CRITICAL: Use Snapshots, Not Screenshots
+## Tool Cost Reference
 
-**ALWAYS use `get_page_snapshot` as your PRIMARY tool.** Do NOT default to `capture_screenshot`.
+| Cost | Tools | Use For |
+|---|---|---|
+| Low | `get_visual_hierarchy`, `click_element`, `input_text`, `scroll_to_element` | Layout overview, trigger interactions |
+| Mid | `get_page_snapshot`, `get_element_details`, `get_console_logs` | DOM with `@eID`, element deep dive, logs |
+| High | `capture_screenshot` | Visual comparison with design mockups only |
 
-Why snapshots win:
-- **Actionable**: Provides `devpilot-id` (e.g., `@e123`) for interactions
-- **Token-efficient**: 10-20x fewer tokens than screenshots
-- **Reliable**: No cross-origin issues, structured data
+## Workflows
 
-Only use screenshots when:
-- User explicitly requests a visual image
-- Verifying visual styling/colors after changes
-- Debugging visual rendering issues
-
-## Workflow
-
-1. **Snapshot First**: Call `get_page_snapshot` to get DOM with `@e123` IDs
-2. **Interact**: Use `click_element`, `input_text` with the IDs from snapshot
-3. **Verify**: Re-run `get_page_snapshot` or check `get_console_logs`
-4. **Screenshot** (last resort): Only for visual verification
-
-Optional tools:
-- `get_visual_hierarchy`: Understand high-level layout
-- `get_element_details`: Get detailed info about specific element
-- `scroll_to_element`: Ensure element is visible
-
-## Best Practices
-
-- **Never screenshot for discovery**: Screenshots have no IDs, waste tokens, can't interact
-- **Use devpilot-id**: More stable than CSS selectors during session
-- **Check clientId**: Use `list_clients` to find active client
-- **Missing elements**: Increase `maxDepth` or use `startNodeId` in snapshot
-
-## Example: Login Flow
+### 1. Fix UI Against Design Mockup
 
 ```
-1. get_page_snapshot(clientId) → find @e10 (username), @e11 (password), @e12 (button)
-2. input_text(clientId, id="e10", text="user")
-3. input_text(clientId, id="e11", text="pass")
-4. click_element(clientId, id="e12")
-5. get_page_snapshot(clientId) → verify dashboard loaded
+capture_screenshot → compare with design → edit styles → capture_screenshot → verify
 ```
 
-## Performance Debugging
+Screenshot is justified here — pixel-level visual comparison requires images.
 
-Add monitoring code (console.time, console.log, PerformanceObserver) to source files, then use `get_console_logs` to collect data.
+### 2. Verify Interaction Flows
 
-**Render performance**: Add useEffect logging → trigger renders → `get_console_logs(clientId, keyword="[PERF]")`
+```
+get_page_snapshot → find @eID → click_element/input_text → get_page_snapshot → verify DOM changes
+```
 
-**Interaction latency**: Add console.time/timeEnd → perform action → `get_console_logs(clientId)`
+Example: `snapshot → @e42 [button] "Settings" → click_element(e42) → snapshot → confirm dialog appeared`
 
-**Memory leaks**: Log performance.memory → repeat operation → `get_console_logs(clientId, keyword="[MEMORY]")`
+### 3. Debug Bugs via Logs
 
-**Long tasks**: Add PerformanceObserver('longtask') → perform operation → `get_console_logs(clientId, level="warn")`
+```
+get_console_logs(level="error") → add console.log("[BUG]",...) to code
+→ click_element to reproduce → get_console_logs(keyword="[BUG]")
+→ fix code → re-trigger → get_console_logs → confirm fix
+```
 
-Use log prefixes ([PERF], [MEMORY]) for filtering. Focus on runtime performance, not dev server loading.
+Use prefixes (`[BUG]`, `[PERF]`) + `keyword`/`level` filter to avoid log noise.
+
+### 4. Explore Page Structure
+
+```
+get_visual_hierarchy → understand layout (cheap)
+→ get_page_snapshot(startNodeId="eX") → targeted DOM of area of interest
+→ get_element_details("eY") → deep dive if needed
+```
+
+**Always start with `get_visual_hierarchy`** — cheapest way to understand the page.
+
+### 5. Performance Debugging
+
+```
+Add console.time/PerformanceObserver → click_element to trigger
+→ get_console_logs(keyword="[PERF]") → fix → re-trigger → verify
+```
+
+## Decision Guide
+
+- **Understand layout?** → `get_visual_hierarchy` first
+- **Need element IDs?** → `get_page_snapshot` (use `startNodeId` to narrow scope)
+- **Click / type?** → `click_element` / `input_text` with `@eID`
+- **Compare with design?** → `capture_screenshot`
+- **Runtime data?** → `get_console_logs` with `keyword` / `level`
+- **Element off-screen?** → `scroll_to_element` before snapshot
+- **Computed styles / position?** → `get_element_details`
+
+## Anti-Patterns
+
+- ✗ `capture_screenshot` to discover structure (use `get_visual_hierarchy`)
+- ✗ Full-page snapshot when only one section needed (use `startNodeId`)
+- ✗ `get_console_logs` without `keyword`/`level` filter (token waste)
+- ✗ Skipping `get_visual_hierarchy` and jumping straight to detailed snapshot
