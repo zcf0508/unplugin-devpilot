@@ -94,7 +94,7 @@ Input text into an element by its identifier.
 
 ### 6. `get_console_logs`
 
-Get browser console logs including errors, warnings, and user logs. Filters logs by client ID.
+Get browser console logs including errors, warnings, info, and debug logs. **`console.log` is NOT captured** — use `console.info` or higher (`warn`/`error`) for debugging. Filters logs by client ID.
 
 **Parameters:**
 - `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
@@ -105,7 +105,7 @@ Get browser console logs including errors, warnings, and user logs. Filters logs
 
 **Returns:**
 - Captured console logs with timestamps and stack traces
-- Includes errors, warnings, info, and debug messages
+- Includes errors, warnings, info, and debug messages (NOT `console.log`)
 
 ### 7. `capture_screenshot`
 

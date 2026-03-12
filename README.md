@@ -156,7 +156,7 @@ Built-in DOM inspection plugin offering:
 - `get_element_details` - Get comprehensive element info (HTML + accessibility + position)
 - `click_element` - Click elements
 - `input_text` - Fill form fields
-- `get_console_logs` - Access browser logs (filtered by client)
+- `get_console_logs` - Access browser logs (error/warn/info/debug only; `console.log` is NOT captured)
 - `scroll_to_element` - Scroll element into view (for scrollable containers)
 - `capture_screenshot` - Capture page or element screenshot (cross-origin images without CORS headers may appear blank)
 

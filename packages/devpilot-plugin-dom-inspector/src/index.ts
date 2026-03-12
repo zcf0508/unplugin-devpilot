@@ -295,7 +295,7 @@ export default <DevpilotPlugin>{
         'get_console_logs',
         {
           title: 'Get Console Logs',
-          description: 'Get browser console logs including errors, warnings, and user logs. Filters logs by client ID.',
+          description: 'Get browser console logs including errors, warnings, info, and debug logs. NOTE: console.log is NOT captured — use console.info or higher (warn/error) for debugging. Filters logs by client ID.',
           inputSchema: z.object({
             clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
             level: z.enum(['all', 'error', 'warn', 'info', 'debug']).optional().default('all').describe('Log level filter'),

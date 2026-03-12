@@ -154,7 +154,7 @@ import 'virtual:devpilot-client';
 - `get_element_details` - 获取全面的元素信息（HTML + 可访问性 + 位置）
 - `click_element` - 点击元素
 - `input_text` - 填充表单字段
-- `get_console_logs` - 访问浏览器日志（按客户端过滤）
+- `get_console_logs` - 访问浏览器日志（仅 error/warn/info/debug；不收集 `console.log`）
 - `scroll_to_element` - 滚动元素到视口（用于滚动容器）
 - `capture_screenshot` - 捕获页面或元素截图（不带 CORS 头的跨域图片可能显示为空白）
 

@@ -46,11 +46,12 @@ Example: `snapshot → @e42 [button] "Settings" → click_element(e42) → snaps
 ### 3. Debug Bugs via Logs
 
 ```
-get_console_logs(level="error") → add console.log("[BUG]",...) to code
+get_console_logs(level="error") → add console.info("[BUG]",...) to code
 → click_element to reproduce → get_console_logs(keyword="[BUG]")
 → fix code → re-trigger → get_console_logs → confirm fix
 ```
 
+**Important: `console.log` is NOT captured.** Use `console.info` or higher (`warn`/`error`) for debugging.
 Use prefixes (`[BUG]`, `[PERF]`) + `keyword`/`level` filter to avoid log noise.
 
 ### 4. Explore Page Structure
