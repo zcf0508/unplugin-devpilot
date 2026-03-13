@@ -42,8 +42,13 @@ export function startWebSocketServer(port: number): WebSocketServer {
 
     // Merge all plugin server methods
     const allPluginMethods: Record<string, (...args: any[]) => any> = {};
-    for (const methods of Object.values(pluginServerMethods)) {
-      Object.assign(allPluginMethods, methods);
+    for (const [namespace, methods] of Object.entries(pluginServerMethods)) {
+      for (const [name, fn] of Object.entries(methods)) {
+        if (allPluginMethods[name]) {
+          console.warn(`[unplugin-devpilot] Method "${name}" from plugin "${namespace}" conflicts with an existing method. The previous one will be overwritten.`);
+        }
+        allPluginMethods[name] = fn;
+      }
     }
 
     const serverFunctions: ServerFunctions = {
