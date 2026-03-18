@@ -206,6 +206,10 @@ export function createDevpilotClient<S extends Record<string, any> = ServerFunct
     isConnected: () => ws !== null && ws.readyState === WebSocket.OPEN,
     onConnected: (callback) => {
       connectedCallbacks.add(callback);
+      // If already connected, invoke callback immediately
+      if (clientId !== null && ws !== null && ws.readyState === WebSocket.OPEN) {
+        callback();
+      }
       return () => connectedCallbacks.delete(callback);
     },
     onDisconnected: (callback) => {
