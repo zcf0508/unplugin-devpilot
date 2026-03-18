@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "04bdf61264d3f27f6467c8acc2b25b2df811d251",
+  "prompts": {
+    "98fd742d6da0e55f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_30aab167bffe1op1h6fp30y6Q4",
+        "model": "xiaomi/mimo-v2-flash"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 467,
+      "total_deletions": 0,
+      "accepted_lines": 467,
+      "overriden_lines": 0
+    }
+  }
+}
