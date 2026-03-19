@@ -1,0 +1,36 @@
+packages/unplugin-devpilot/src/core/skill-generator.ts
+  74744113f91c9ab7 200-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "9189a2e9e4f530a7a5ef41f93b11cf69aee32433",
+  "prompts": {
+    "74744113f91c9ab7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2fa0ef566ffegHdLE35gsxJ0sY",
+        "model": "opencode/mimo-v2-pro-free"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "98fd742d6da0e55f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_30aab167bffe1op1h6fp30y6Q4",
+        "model": "xiaomi/mimo-v2-flash"
+      },
+      "human_author": "zcf0508 <zcf0508@live.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 467,
+      "overriden_lines": 0
+    }
+  }
+}
