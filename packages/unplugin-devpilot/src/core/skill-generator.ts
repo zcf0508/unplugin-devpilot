@@ -197,6 +197,8 @@ ${skillList || 'No plugin skills configured'}
 
 ## Usage
 
+> **Important**: Before calling any plugin-provided MCP tools, you MUST first read the corresponding skill content. Each skill documents the tool's purpose, parameters, and usage patterns. Using tools without reading the skill may lead to incorrect results or unexpected behavior.
+
 These skills can be used with Claude Agent to interact with web applications.
 
 ## Configuration
