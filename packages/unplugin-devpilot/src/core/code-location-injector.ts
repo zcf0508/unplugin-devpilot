@@ -80,10 +80,10 @@ function shouldExcludeFile(filePath: string): boolean {
  * Transform code to inject source location
  * Automatically detects file type and skips if code-inspector is already present
  */
-export function injectSourceLocation(
+export async function injectSourceLocation(
   code: string,
   id: string,
-): string | null {
+): Promise<string | null> {
   // Skip if file should be excluded
   if (shouldExcludeFile(id)) {
     return null;
@@ -104,7 +104,7 @@ export function injectSourceLocation(
   }
 
   try {
-    const result = transformCode({
+    const result = await transformCode({
       content: code,
       filePath,
       fileType,

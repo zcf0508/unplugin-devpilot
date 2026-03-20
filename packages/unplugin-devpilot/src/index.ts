@@ -136,7 +136,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         }
       },
 
-      transform(code, id) {
+      async transform(code, id) {
         // Skip in production or test mode
         if (process.env.NODE_ENV === 'production' || isTestEnvironment()) {
           return null;
@@ -145,7 +145,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
         // Inject source location into code
         // If code-inspector is present, it will overwrite our injection
         // This is acceptable as code-inspector's injection is more accurate
-        const result = injectSourceLocation(code, id);
+        const result = await injectSourceLocation(code, id);
         if (result) {
           return { code: result };
         }

@@ -85,8 +85,8 @@ importers:
   packages/unplugin-devpilot:
     dependencies:
       '@code-inspector/core':
-        specifier: ^1.4.2
-        version: 1.4.2
+        specifier: ^1.4.5
+        version: 1.4.5
       '@farmfe/core':
         specifier: '>=1'
         version: 1.7.11(@types/node@25.0.10)
@@ -315,8 +315,8 @@ packages:
   '@clack/prompts@0.11.0':
     resolution: {integrity: sha512-pMN5FcrEw9hUkZA4f+zLlzivQSeQf5dRGJjSUbvVYDLvpKCdQx5OaknvKzgbtXOizhP+SJJJjqEbOe55uKKfAw==}
 
-  '@code-inspector/core@1.4.2':
-    resolution: {integrity: sha512-7OPkFtkfYaXhuTlwub2jT++rW7VggMMEeqsPIZGvHdXykwKAtzB8nnrj3N3uBT/mRoFfP627ShrVyRzCqyfr2w==}
+  '@code-inspector/core@1.4.5':
+    resolution: {integrity: sha512-wskkSRX13TAqJG65d5sq0bRZ4kYktas/iE70xqXMOeqW/A6n2Zqhw5QRHANmEmlBvB9bP/bse+9iBkNN3Q2Skw==}
 
   '@emnapi/core@1.8.1':
     resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
@@ -2605,8 +2605,8 @@ packages:
     resolution: {integrity: sha512-zPPuIt+ku1iCpFBRwseMcPYQ1cJL8l60rSmKeOuGfOXyE6YnTBmf2aEFNL2HQGrD0cPcLO/t+v9RTgC+fwEh/g==}
     engines: {node: ^4.8.4 || ^6.10.1 || ^7.10.1 || >= 8.1.4}
 
-  launch-ide@1.4.0:
-    resolution: {integrity: sha512-c2mcqZy7mNhzXiWoBFV0lDsEOfpSFGqqxKubPffhqcnv3GV0xpeGcHWLxYFm+jz1/5VAKp796QkyVV4++07eiw==}
+  launch-ide@1.4.3:
+    resolution: {integrity: sha512-v2xMAarJOFy51kuesYEIIx5r4WHvsV+VLMU49K24bdiRZGUpo1ZulO1DRrLozM5BMbXUfRfrUTM2PbBfYCeA4Q==}
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -4174,12 +4174,12 @@ snapshots:
       picocolors: 1.1.1
       sisteransi: 1.0.5
 
-  '@code-inspector/core@1.4.2':
+  '@code-inspector/core@1.4.5':
     dependencies:
       '@vue/compiler-dom': 3.5.27
       chalk: 4.1.2
       dotenv: 16.6.1
-      launch-ide: 1.4.0
+      launch-ide: 1.4.3
       portfinder: 1.0.38
     transitivePeerDependencies:
       - supports-color
@@ -6555,7 +6555,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  launch-ide@1.4.0:
+  launch-ide@1.4.3:
     dependencies:
       chalk: 4.1.2
       dotenv: 16.6.1
