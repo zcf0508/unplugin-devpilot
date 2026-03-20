@@ -15,11 +15,11 @@ describe('code-location-injector', () => {
   });
 
   describe('injectSourceLocation', () => {
-    it('should inject location for JSX files', () => {
+    it('should inject location for JSX files', async () => {
       const code = `export default function App() {
   return <div>Hello</div>;
 }`;
-      const result = injectSourceLocation(code, '/path/to/App.jsx');
+      const result = await injectSourceLocation(code, '/path/to/App.jsx');
 
       if (result) {
         expect(result).toContain('data-insp-path');
@@ -30,11 +30,11 @@ describe('code-location-injector', () => {
       }
     });
 
-    it('should inject location for TSX files', () => {
+    it('should inject location for TSX files', async () => {
       const code = `export default function App() {
   return <div>Hello</div>;
 }`;
-      const result = injectSourceLocation(code, '/path/to/App.tsx');
+      const result = await injectSourceLocation(code, '/path/to/App.tsx');
 
       if (result) {
         expect(result).toContain('data-insp-path');
@@ -45,39 +45,39 @@ describe('code-location-injector', () => {
       }
     });
 
-    it('should skip if code-inspector already present', () => {
+    it('should skip if code-inspector already present', async () => {
       const code = '<div data-insp-path="src/App.tsx:10:5:div">Hello</div>';
-      const result = injectSourceLocation(code, '/path/to/App.jsx');
+      const result = await injectSourceLocation(code, '/path/to/App.jsx');
 
       expect(result).toBeNull();
     });
 
-    it('should skip node_modules files', () => {
+    it('should skip node_modules files', async () => {
       const code = 'export default function App() { return <div>Hello</div>; }';
-      const result = injectSourceLocation(code, '/path/to/node_modules/package/App.jsx');
+      const result = await injectSourceLocation(code, '/path/to/node_modules/package/App.jsx');
 
       expect(result).toBeNull();
     });
 
-    it('should skip virtual modules', () => {
+    it('should skip virtual modules', async () => {
       const code = 'export default function App() { return <div>Hello</div>; }';
-      const result = injectSourceLocation(code, '\0virtual:module');
+      const result = await injectSourceLocation(code, '\0virtual:module');
 
       expect(result).toBeNull();
     });
 
-    it('should skip non-supported file types', () => {
+    it('should skip non-supported file types', async () => {
       const code = 'console.log("hello");';
-      const result = injectSourceLocation(code, '/path/to/file.css');
+      const result = await injectSourceLocation(code, '/path/to/file.css');
 
       expect(result).toBeNull();
     });
 
-    it('should handle Vue files', () => {
+    it('should handle Vue files', async () => {
       const code = `<template>
   <div>Hello</div>
 </template>`;
-      const result = injectSourceLocation(code, '/path/to/App.vue');
+      const result = await injectSourceLocation(code, '/path/to/App.vue');
 
       if (result) {
         expect(result).toContain('data-insp-path');
@@ -88,9 +88,9 @@ describe('code-location-injector', () => {
       }
     });
 
-    it('should handle Vue files with query params', () => {
+    it('should handle Vue files with query params', async () => {
       const code = '<div>Hello</div>';
-      const result = injectSourceLocation(code, '/path/to/App.vue?type=template');
+      const result = await injectSourceLocation(code, '/path/to/App.vue?type=template');
 
       if (result) {
         expect(result).toContain('data-insp-path');
@@ -101,9 +101,9 @@ describe('code-location-injector', () => {
       }
     });
 
-    it('should skip Vue style blocks', () => {
+    it('should skip Vue style blocks', async () => {
       const code = '.class { color: red; }';
-      const result = injectSourceLocation(code, '/path/to/App.vue?type=style');
+      const result = await injectSourceLocation(code, '/path/to/App.vue?type=style');
 
       expect(result).toBeNull();
     });
