@@ -95,6 +95,8 @@ This import activates the WebSocket connection to the development server and ini
 
 A Lit + Shadow DOM overlay mounts automatically: **Tasks** polls **getTaskDashboard** at 1 Hz and lists pending + in progress; **Get approval token** feeds **complete_task** on the MCP side. **Alt+Shift+I** submits a task. Built-in MCP tools include **get_pending_tasks**, **claim_task**, and **complete_task** (token-gated). The **Devpilot** badge shows the pending count.
 
+Plugins can export a `taskPayloadHook` from their client module to enrich the task payload before submission (e.g., inject `devpilotId`). Hooks run in plugin registration order via `registerTaskPayloadHook` and receive both the payload and the raw DOM element.
+
 ## Configuration
 
 You can customize the plugin behavior by passing options:

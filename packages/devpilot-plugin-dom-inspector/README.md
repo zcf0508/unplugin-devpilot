@@ -220,6 +220,10 @@ const snapshot = await mcp.call('builtin-dom-inspector_get_page_snapshot', {
 });
 ```
 
+## Task Payload Hook
+
+This plugin exports a `taskPayloadHook` from its client module. When a user picks an element via the task UI (**Alt+Shift+I**), the hook lazily assigns a `devpilotId` (`e*` encoding via `bindElementId`) to the picked DOM element and writes it into `payload.element.devpilotId`. This allows the agent to reference the element directly with MCP tools like `click_element` or `get_element_details`.
+
 ## Client-Side Behavior
 
 When loaded in the browser, this plugin will:
@@ -227,6 +231,7 @@ When loaded in the browser, this plugin will:
 2. Capture unhandled errors and promise rejections
 3. Build accessibility trees for DOM inspection
 4. Respond to RPC calls from the server
+5. Enrich task payloads with `devpilotId` via `taskPayloadHook`
 
 ## Implementation Details
 

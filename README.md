@@ -129,6 +129,8 @@ This import activates the WebSocket connection to the development server and ini
 
 In dev, a **Lit + Shadow DOM** task overlay loads: **Tasks** polls the queue every second and lists pending + in progress; use **Get approval token** before **complete_task** in MCP. **Alt+Shift+I** enqueues a task; the agent uses **get_pending_tasks** (often with `clearAfterFetch: false`), **claim_task**, then **complete_task** with a developer-issued token. The **Devpilot** badge shows the pending count.
 
+Plugins can export a `taskPayloadHook` from their client module to enrich the task payload before submission. For example, `devpilot-plugin-dom-inspector` lazily assigns a `devpilotId` (`e*` encoding) to the picked element, so the agent can reference it directly via MCP tools.
+
 ## Packages
 
 ### [unplugin-devpilot](./packages/unplugin-devpilot)

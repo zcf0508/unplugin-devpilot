@@ -129,6 +129,8 @@ import 'virtual:devpilot-client';
 
 会自动挂载基于 Lit + Shadow DOM 的浮层：**Tasks** 每秒轮询并展示待办与进行中；进行中任务可在面板 **Get approval token** 后，再在 MCP 里调用 **complete_task**。**Alt+Shift+I** 提交任务；Agent 侧典型流程：**get_pending_tasks**（常设 `clearAfterFetch: false`）→ **claim_task** → 开发者确认后发 token → **complete_task**。右下角 **Devpilot** 角标显示待处理数量。
 
+插件可从客户端模块导出 `taskPayloadHook`，在提交前富化任务载荷。例如 `devpilot-plugin-dom-inspector` 会对 pick 的元素懒分配 `devpilotId`（`e*` 编码），使 Agent 可直接通过 MCP 工具引用该元素。
+
 ## 包介绍
 
 ### [unplugin-devpilot](./packages/unplugin-devpilot)

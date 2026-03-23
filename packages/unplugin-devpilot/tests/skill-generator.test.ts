@@ -172,8 +172,9 @@ describe('skill-generator', () => {
 
         1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
         2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
-        3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
-        4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+        3. The task payload includes \`element.devpilotId\` (when dom-inspector is active) — use this id directly with DOM tools like \`click_element\` or \`get_element_details\`.
+        4. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+        5. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
 
         Use **list_clients** when multiple tabs are open.
 
@@ -260,8 +261,9 @@ describe('skill-generator', () => {
 
         1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
         2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
-        3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
-        4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+        3. The task payload includes \`element.devpilotId\` (when dom-inspector is active) — use this id directly with DOM tools like \`click_element\` or \`get_element_details\`.
+        4. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+        5. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
 
         Use **list_clients** when multiple tabs are open.
 
@@ -322,8 +324,9 @@ describe('skill-generator', () => {
 
         1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
         2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
-        3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
-        4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+        3. The task payload includes \`element.devpilotId\` (when dom-inspector is active) — use this id directly with DOM tools like \`click_element\` or \`get_element_details\`.
+        4. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+        5. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
 
         Use **list_clients** when multiple tabs are open.
 
@@ -401,8 +404,9 @@ describe('skill-generator', () => {
 
         1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
         2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
-        3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
-        4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+        3. The task payload includes \`element.devpilotId\` (when dom-inspector is active) — use this id directly with DOM tools like \`click_element\` or \`get_element_details\`.
+        4. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+        5. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
 
         Use **list_clients** when multiple tabs are open.
 
@@ -458,8 +462,9 @@ describe('skill-generator', () => {
 
         1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
         2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
-        3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
-        4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+        3. The task payload includes \`element.devpilotId\` (when dom-inspector is active) — use this id directly with DOM tools like \`click_element\` or \`get_element_details\`.
+        4. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+        5. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
 
         Use **list_clients** when multiple tabs are open.
 
