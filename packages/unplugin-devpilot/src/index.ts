@@ -47,17 +47,22 @@ function generateVirtualClientModule(options: OptionsResolved, isDev: boolean): 
 
   const pluginModules = getPluginClientModules(options.plugins, options);
 
-  // Generate dynamic imports for all plugin modules
+  // Generate dynamic imports for all plugin modules (namespace import for safe optional access)
   const importStatements = pluginModules.map((mod, index) =>
-    `import { rpcHandlers as handlers_${index} } from '${mod}';`,
+    `import * as plugin_${index} from '${mod}';`,
   ).join('\n');
 
   // Generate code to collect all handlers
-  const handlerCollection = pluginModules.map((_, index) => `  ...handlers_${index},`).join('\n');
+  const handlerCollection = pluginModules.map((_, index) => `  ...plugin_${index}.rpcHandlers,`).join('\n');
+
+  // Generate code to register task payload hooks from plugins
+  const hookRegistrations = pluginModules.map((_, index) =>
+    `if (typeof plugin_${index}.taskPayloadHook === 'function') registerTaskPayloadHook(plugin_${index}.taskPayloadHook);`,
+  ).join('\n');
 
   return `
 ${importStatements}
-import { initDevpilot } from 'unplugin-devpilot/client';
+import { initDevpilot, mountDevpilotTaskUi, registerTaskPayloadHook } from 'unplugin-devpilot/client';
 
 export const wsPort = ${options.wsPort};
 export const client = initDevpilot({
@@ -65,6 +70,8 @@ export const client = initDevpilot({
 ${handlerCollection}
   }
 });
+${hookRegistrations}
+mountDevpilotTaskUi(client);
 `;
 }
 

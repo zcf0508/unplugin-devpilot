@@ -1,8 +1,14 @@
 import type { McpToolResolved } from './plugin';
 import type { ClientDiscoveryFilter } from './types';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { clientManager } from './client-manager';
 import { defineMcpToolRegister } from './plugin/mcp';
+
+const completeTaskAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+} satisfies ToolAnnotations;
 
 const listClients = defineMcpToolRegister(
   'list_clients',
@@ -67,9 +73,9 @@ const getPendingTasks = defineMcpToolRegister(
   'get_pending_tasks',
   {
     title: 'Get Pending Tasks',
-    description: 'Get pending tasks submitted from browser',
+    description: 'List tasks still in the pending queue. If you use claim_task, set clearAfterFetch to false first so task ids stay available to claim.',
     inputSchema: {
-      clearAfterFetch: z.boolean().optional().default(true).describe('Clear tasks after fetching'),
+      clearAfterFetch: z.boolean().optional().default(true).describe('Clear the pending queue after returning (default true). Use false when you will claim_task by id.'),
     },
   },
   async (params) => {
@@ -84,6 +90,55 @@ const getPendingTasks = defineMcpToolRegister(
             ? `Found ${tasks.length} pending task(s)`
             : 'No pending tasks',
         }, null, 2),
+      }],
+    };
+  },
+);
+
+const claimTask = defineMcpToolRegister(
+  'claim_task',
+  {
+    title: 'Claim task',
+    description:
+      'Take ownership of a pending task: removes it from the queue and sets status to in progress. Use get_pending_tasks with clearAfterFetch: false to read task ids, then claim one id before working.',
+    inputSchema: {
+      taskId: z.string().describe('Pending task id to claim'),
+    },
+  },
+  async (params) => {
+    const r = clientManager.claimTask(params.taskId);
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(r, null, 2),
+      }],
+    };
+  },
+);
+
+const completeTask = defineMcpToolRegister(
+  'complete_task',
+  {
+    title: 'Complete task',
+    description:
+      'Marks an in-progress task as completed. **Requires approvalToken**: the human developer must click "Get approval token" in the browser Tasks panel for this task, copy the token, and confirm in chat that the agent may finish. **Do not call** until the developer has provided the token — random values will fail.',
+    inputSchema: {
+      taskId: z.string().describe('In-progress task id'),
+      approvalToken: z.string().describe('Exact one-time token from the browser (Tasks panel → Get approval token)'),
+      summary: z.string().optional().describe('Short note of what was done'),
+    },
+    annotations: completeTaskAnnotations,
+  },
+  async (params) => {
+    const r = clientManager.completeTaskWithApproval(
+      params.taskId,
+      params.approvalToken,
+      params.summary === undefined ? undefined : { summary: params.summary },
+    );
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(r, null, 2),
       }],
     };
   },
@@ -141,6 +196,8 @@ const getTaskHistory = defineMcpToolRegister(
 const builtinToolRegisters = [
   listClients,
   getPendingTasks,
+  claimTask,
+  completeTask,
   getTaskHistory,
 ];
 

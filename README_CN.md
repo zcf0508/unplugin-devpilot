@@ -125,6 +125,10 @@ import 'virtual:devpilot-client';
 
 这个导入会激活到开发服务器的 WebSocket 连接，并在客户端初始化所有已注册的插件。
 
+### 任务 UI（开发环境）
+
+会自动挂载基于 Lit + Shadow DOM 的浮层：**Tasks** 每秒轮询并展示待办与进行中；进行中任务可在面板 **Get approval token** 后，再在 MCP 里调用 **complete_task**。**Alt+Shift+I** 提交任务；Agent 侧典型流程：**get_pending_tasks**（常设 `clearAfterFetch: false`）→ **claim_task** → 开发者确认后发 token → **complete_task**。右下角 **Devpilot** 角标显示待处理数量。
+
 ## 包介绍
 
 ### [unplugin-devpilot](./packages/unplugin-devpilot)

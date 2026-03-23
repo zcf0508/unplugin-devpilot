@@ -1,4 +1,5 @@
 import type { DomInspectorRpc, GetLayoutResult } from '../shared-types';
+import type { TaskPayloadHook } from 'unplugin-devpilot/client';
 import { omit } from 'es-toolkit/compat';
 import { defineRpcHandlers } from 'unplugin-devpilot/client';
 import { captureScreenshot } from './captureScreenshot';
@@ -11,6 +12,7 @@ import { getLayout } from './getLayout';
 import { inputTextById } from './inputTextById';
 import { querySelector } from './querySelector';
 import { scrollToElement } from './scrollToElement';
+import { bindElementId } from './utils/buildCompactSnapshot';
 import './getLogs';
 
 export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
@@ -48,3 +50,15 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
   // Capture screenshot of page or element
   captureScreenshot,
 });
+
+/**
+ * Task payload hook: lazily allocate a `data-devpilot-id` (e* encoding) on the
+ * picked element and write it into the payload so the agent can reference it.
+ */
+export const taskPayloadHook: TaskPayloadHook = (payload, { element }) => {
+  const devpilotId = bindElementId(element);
+  return {
+    ...payload,
+    element: { ...payload.element, devpilotId },
+  };
+};

@@ -8,21 +8,24 @@ export interface ClientInfo {
   active: boolean
 }
 
+export interface TaskElementInfo {
+  uid: string
+  selector: string
+  role: string
+  name: string
+  devpilotId?: string
+  codeLocation?: {
+    file: string
+    line: number
+    column: number
+  }
+  [key: string]: unknown
+}
+
 export interface TaskHistory {
   id: string
   sourceClient: string
-  intent: 'analyze' | 'modify' | 'test' | 'style' | 'ask'
-  element: {
-    uid: string
-    selector: string
-    role: string
-    name: string
-    codeLocation?: {
-      file: string
-      line: number
-      column: number
-    }
-  }
+  element: TaskElementInfo
   userNote?: string
   timestamp: number
   status: 'pending' | 'in_progress' | 'completed' | 'failed'
@@ -40,26 +43,25 @@ export interface ClientDiscoveryFilter {
 export interface PendingTask {
   id: string
   sourceClient: string
-  intent: 'analyze' | 'modify' | 'test' | 'style' | 'ask'
-  element: {
-    uid: string
-    selector: string
-    role: string
-    name: string
-    codeLocation?: {
-      file: string
-      line: number
-      column: number
-    }
-  }
+  element: TaskElementInfo
   userNote?: string
   timestamp: number
 }
+
+/** Payload from browser task UI; server assigns id, sourceClient, timestamp. */
+export type TaskSubmitPayload = Pick<PendingTask, 'element' | 'userNote'>
 
 // Base server functions that can be extended by plugins
 export interface BaseServerFunctions {
   ping: () => string
   updateClientInfo: (info: Omit<ClientInfo, 'clientId' | 'connectedAt' | 'lastActiveAt'>) => void
+  submitTask: (payload: TaskSubmitPayload) => { id: string }
+  /** Read-only queue snapshot for the in-browser task panel (does not dequeue). */
+  peekPendingTasks: () => PendingTask[]
+  /** Pending queue + in-progress history for UI polling. */
+  getTaskDashboard: () => { pending: PendingTask[], inProgress: TaskHistory[] }
+  /** Issue a one-time token for completing a task (browser only; human pastes into the agent). */
+  prepareTaskCompletionApproval: (taskId: string) => { token: string } | { error: string }
   storageGetItem: (namespace: string, key: string) => Promise<any>
   storageSetItem: (namespace: string, key: string, value: any) => Promise<void>
   storageRemoveItem: (namespace: string, key: string) => Promise<void>

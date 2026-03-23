@@ -91,6 +91,10 @@ import 'virtual:devpilot-client';
 
 This import activates the WebSocket connection to the development server and initializes all registered plugins on the client side.
 
+### Task UI (dev)
+
+A Lit + Shadow DOM overlay mounts automatically: **Tasks** polls **getTaskDashboard** at 1 Hz and lists pending + in progress; **Get approval token** feeds **complete_task** on the MCP side. **Alt+Shift+I** submits a task. Built-in MCP tools include **get_pending_tasks**, **claim_task**, and **complete_task** (token-gated). The **Devpilot** badge shows the pending count.
+
 ## Configuration
 
 You can customize the plugin behavior by passing options:

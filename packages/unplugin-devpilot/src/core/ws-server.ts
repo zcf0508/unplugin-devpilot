@@ -1,6 +1,7 @@
 import type { DevpilotPlugin } from './options';
-import type { ClientFunctions, ServerFunctions } from './types';
+import type { ClientFunctions, ServerFunctions, TaskSubmitPayload } from './types';
 import { createBirpc } from 'birpc';
+import { uniqueId } from 'es-toolkit/compat';
 import { WebSocketServer } from 'ws';
 import { clientManager } from './client-manager';
 import { getPluginStorage } from './storage';
@@ -57,6 +58,26 @@ export function startWebSocketServer(port: number): WebSocketServer {
       },
       updateClientInfo(info) {
         clientManager.updateClientInfo(clientId, info);
+      },
+      submitTask(payload: TaskSubmitPayload) {
+        const id = uniqueId('task_');
+        clientManager.addTask({
+          id,
+          sourceClient: clientId,
+          element: payload.element,
+          userNote: payload.userNote,
+          timestamp: Date.now(),
+        });
+        return { id };
+      },
+      peekPendingTasks() {
+        return clientManager.peekPendingTasks();
+      },
+      getTaskDashboard() {
+        return clientManager.getTaskDashboard();
+      },
+      prepareTaskCompletionApproval(taskId: string) {
+        return clientManager.createCompletionApproval(taskId);
       },
       async storageGetItem(namespace: string, key: string) {
         return getPluginStorage(namespace).getItem(key);

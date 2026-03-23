@@ -108,7 +108,7 @@ const CONTENT_ROLES = new Set<string>([
 ]);
 
 // Helper function to bind unique ID to DOM element
-function bindElementId(element: Element): string {
+export function bindElementId(element: Element): string {
   // Check if element already has a devpilot ID
   let id = element.getAttribute('data-devpilot-id');
   if (id) {

@@ -14,6 +14,8 @@ export class ClientManager {
   private taskQueue: PendingTask[] = [];
   private taskHistory: TaskHistory[] = [];
   private readonly maxTaskHistory = 1000;
+  /** One-time approval tokens for MCP complete_task (key = token). */
+  private completionApprovals = new Map<string, { taskId: string, expiresAt: number }>();
 
   generateClientId(): string {
     return uniqueId('c_');
@@ -138,8 +140,82 @@ export class ClientManager {
     return tasks;
   }
 
+  /** Snapshot of the queue without removing tasks (for browser UI). */
+  peekPendingTasks(): PendingTask[] {
+    return [...this.taskQueue];
+  }
+
   getTaskCount(): number {
     return this.taskQueue.length;
+  }
+
+  getTaskDashboard(): { pending: PendingTask[], inProgress: TaskHistory[] } {
+    return {
+      pending: this.peekPendingTasks(),
+      inProgress: this.getTaskHistory({ status: 'in_progress', limit: 50 }),
+    };
+  }
+
+  /**
+   * Remove a task from the queue and mark it in progress in history.
+   */
+  claimTask(taskId: string): { ok: true, task: PendingTask } | { ok: false, error: string } {
+    const idx = this.taskQueue.findIndex(t => t.id === taskId);
+    if (idx === -1) {
+      return { ok: false, error: 'Task not in queue (already claimed or invalid id)' };
+    }
+    const [task] = this.taskQueue.splice(idx, 1);
+    const hist = this.taskHistory.find(t => t.id === taskId);
+    if (hist && hist.status === 'pending') {
+      hist.status = 'in_progress';
+    }
+    this.notifyAllClients();
+    return { ok: true, task };
+  }
+
+  /**
+   * Browser-only: create a one-time token so the developer can paste it to the agent for complete_task.
+   */
+  createCompletionApproval(taskId: string): { token: string } | { error: string } {
+    const hist = this.taskHistory.find(t => t.id === taskId && t.status === 'in_progress');
+    if (!hist) {
+      return { error: 'No in-progress task with this id' };
+    }
+    const token = uniqueId('appr_');
+    this.completionApprovals.set(token, { taskId, expiresAt: Date.now() + 10 * 60 * 1000 });
+    return { token };
+  }
+
+  /**
+   * MCP: complete a task only with a valid approval token from the browser.
+   */
+  completeTaskWithApproval(
+    taskId: string,
+    token: string,
+    result?: Record<string, any>,
+  ): { ok: true } | { ok: false, error: string } {
+    const entry = this.completionApprovals.get(token);
+    if (!entry) {
+      return { ok: false, error: 'Invalid or unknown approval token' };
+    }
+    if (entry.expiresAt < Date.now()) {
+      this.completionApprovals.delete(token);
+      return { ok: false, error: 'Approval token expired; ask the developer to issue a new one in the Tasks panel' };
+    }
+    if (entry.taskId !== taskId) {
+      return { ok: false, error: 'Token does not match taskId' };
+    }
+    const task = this.taskHistory.find(t => t.id === taskId);
+    if (!task || task.status !== 'in_progress') {
+      return { ok: false, error: 'Task is not in progress' };
+    }
+    this.completionApprovals.delete(token);
+    task.status = 'completed';
+    task.completedAt = Date.now();
+    task.completedBy = 'mcp';
+    task.result = result;
+    this.notifyTaskCompleted(taskId);
+    return { ok: true };
   }
 
   /**

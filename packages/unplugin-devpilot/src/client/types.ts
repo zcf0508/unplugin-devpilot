@@ -1,7 +1,23 @@
-import type { ClientFunctions, ServerFunctions } from '../core/types';
+import type { ClientFunctions, ServerFunctions, TaskSubmitPayload } from '../core/types';
 
 // RpcHandlers should be based on ClientFunctions (methods the server can call on the client)
 export type RpcHandlers = ClientFunctions;
+
+/** Context passed to each task payload hook. */
+export interface TaskPayloadHookContext {
+  /** The raw DOM element that was picked by the user. */
+  element: Element
+  client: DevpilotClient
+}
+
+/**
+ * A hook that enriches the task payload before submission.
+ * Hooks run in registration order; each receives the payload returned by the previous hook.
+ */
+export type TaskPayloadHook = (
+  payload: TaskSubmitPayload,
+  context: TaskPayloadHookContext,
+) => TaskSubmitPayload | Promise<TaskSubmitPayload>;
 
 // Helper type to convert ServerFunctions to rpcCall format with optional extensions
 type PromisifyServerFunctions<T = ServerFunctions> = {

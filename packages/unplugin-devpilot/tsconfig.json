@@ -17,5 +17,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "tests"],
-  "exclude": ["tests/fixtures", "src/client"]
+  "exclude": ["tests/fixtures", "src/client", "tests/client"]
 }

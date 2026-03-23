@@ -201,6 +201,19 @@ ${skillList || 'No plugin skills configured'}
 
 These skills can be used with Claude Agent to interact with web applications.
 
+## Browser task queue (from the page)
+
+When \`virtual:devpilot-client\` is loaded in dev, **Tasks** opens a panel that polls **getTaskDashboard** every second (pending + in progress). **Alt+Shift+I** toggles pick mode to submit a new task.
+
+### Agent workflow
+
+1. **get_pending_tasks** with \`clearAfterFetch: false\` to list ids (or read ids in the panel).
+2. **claim_task** with a \`taskId\` to start work (removes it from the pending queue).
+3. After the human confirms the work is done, they click **Get approval token** in the panel for that in-progress task and paste the token into chat.
+4. Only then call **complete_task** with \`taskId\`, \`approvalToken\`, and optional \`summary\`. **Never** call \`complete_task\` without a real token from the developer.
+
+Use **list_clients** when multiple tabs are open.
+
 ## Configuration
 
 - **Plugins**: ${options.plugins.length}

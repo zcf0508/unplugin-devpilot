@@ -1,10 +1,40 @@
-import type { ServerFunctions } from '../core/types';
-import type { DevpilotClient, DevpilotClientOptions, RpcHandlers } from './types';
+import type { ServerFunctions, TaskSubmitPayload } from '../core/types';
+import type { DevpilotClient, DevpilotClientOptions, RpcHandlers, TaskPayloadHook, TaskPayloadHookContext } from './types';
 import { WS_PROXY_PATH } from '../core/constants';
 
-export type { DevpilotClient, DevpilotClientOptions, RpcHandlers };
+export type { DevpilotClient, DevpilotClientOptions, RpcHandlers, TaskPayloadHook, TaskPayloadHookContext };
 export type { ClientStorage } from './storage';
 export { createClientStorage } from './storage';
+
+const taskPayloadHooks: TaskPayloadHook[] = [];
+
+/**
+ * Register a hook that enriches task payloads before submission.
+ * Hooks run in registration order. Returns an unregister function.
+ */
+export function registerTaskPayloadHook(hook: TaskPayloadHook): () => void {
+  taskPayloadHooks.push(hook);
+  return () => {
+    const idx = taskPayloadHooks.indexOf(hook);
+    if (idx >= 0) {
+      taskPayloadHooks.splice(idx, 1);
+    }
+  };
+}
+
+/**
+ * Run all registered hooks sequentially, returning the enriched payload.
+ */
+export async function runTaskPayloadHooks(
+  payload: TaskSubmitPayload,
+  context: TaskPayloadHookContext,
+): Promise<TaskSubmitPayload> {
+  let result = payload;
+  for (const hook of taskPayloadHooks) {
+    result = await hook(result, context);
+  }
+  return result;
+}
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 12);
@@ -254,3 +284,5 @@ export function getDevpilotClient<S extends Record<string, any> = ServerFunction
 export function defineRpcHandlers<T extends { [K in keyof T]: (...args: any[]) => any }>(handlers: T): T {
   return handlers;
 }
+
+export { mountDevpilotTaskUi } from './task-ui/mount.js';

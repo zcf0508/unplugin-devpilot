@@ -16,6 +16,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src/client"],
+  "include": ["src/client", "tests/client"],
   "exclude": ["src/client/virtual.d.ts"]
 }
