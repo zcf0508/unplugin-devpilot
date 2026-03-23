@@ -1,6 +1,6 @@
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import type { McpToolResolved } from './plugin';
 import type { ClientDiscoveryFilter } from './types';
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { clientManager } from './client-manager';
 import { defineMcpToolRegister } from './plugin/mcp';
@@ -133,7 +133,9 @@ const completeTask = defineMcpToolRegister(
     const r = clientManager.completeTaskWithApproval(
       params.taskId,
       params.approvalToken,
-      params.summary === undefined ? undefined : { summary: params.summary },
+      params.summary === undefined
+        ? undefined
+        : { summary: params.summary },
     );
     return {
       content: [{

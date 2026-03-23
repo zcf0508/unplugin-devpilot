@@ -49,7 +49,7 @@ export interface PendingTask {
 }
 
 /** Payload from browser task UI; server assigns id, sourceClient, timestamp. */
-export type TaskSubmitPayload = Pick<PendingTask, 'element' | 'userNote'>
+export type TaskSubmitPayload = Pick<PendingTask, 'element' | 'userNote'>;
 
 // Base server functions that can be extended by plugins
 export interface BaseServerFunctions {

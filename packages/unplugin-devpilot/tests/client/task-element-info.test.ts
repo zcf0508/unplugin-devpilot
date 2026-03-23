@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   nextTaskElementUid,
   parseDataInspPath,
@@ -14,8 +14,8 @@ describe('parseDataInspPath', () => {
         "file": "src/App.tsx",
         "line": 10,
       }
-    `)
-  })
+    `);
+  });
 
   it('parses path with colons before numeric tail', () => {
     expect(parseDataInspPath('C:/src/App.tsx:12:3:button')).toMatchInlineSnapshot(`
@@ -24,29 +24,29 @@ describe('parseDataInspPath', () => {
         "file": "C:/src/App.tsx",
         "line": 12,
       }
-    `)
-  })
+    `);
+  });
 
   it('returns undefined for invalid strings', () => {
-    expect(parseDataInspPath(null)).toBeUndefined()
-    expect(parseDataInspPath('')).toBeUndefined()
-    expect(parseDataInspPath('no-numbers-here')).toBeUndefined()
-  })
-})
+    expect(parseDataInspPath(null)).toBeUndefined();
+    expect(parseDataInspPath('')).toBeUndefined();
+    expect(parseDataInspPath('no-numbers-here')).toBeUndefined();
+  });
+});
 
 describe('nextTaskElementUid', () => {
   beforeEach(() => {
-    resetTaskElementUidCounter()
-  })
+    resetTaskElementUidCounter();
+  });
 
   it('increments per session prefix', () => {
-    expect(nextTaskElementUid('abc')).toMatchInlineSnapshot(`"dp_abc_1"`)
-    expect(nextTaskElementUid('abc')).toMatchInlineSnapshot(`"dp_abc_2"`)
-  })
-})
+    expect(nextTaskElementUid('abc')).toMatchInlineSnapshot('"dp_abc_1"');
+    expect(nextTaskElementUid('abc')).toMatchInlineSnapshot('"dp_abc_2"');
+  });
+});
 
 describe('shouldIgnorePickTarget', () => {
   it('ignores non-elements', () => {
-    expect(shouldIgnorePickTarget(null)).toBe(true)
-  })
-})
+    expect(shouldIgnorePickTarget(null)).toBe(true);
+  });
+});

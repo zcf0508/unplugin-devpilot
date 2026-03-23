@@ -1,5 +1,5 @@
-import type { DomInspectorRpc, GetLayoutResult } from '../shared-types';
 import type { TaskPayloadHook } from 'unplugin-devpilot/client';
+import type { DomInspectorRpc, GetLayoutResult } from '../shared-types';
 import { omit } from 'es-toolkit/compat';
 import { defineRpcHandlers } from 'unplugin-devpilot/client';
 import { captureScreenshot } from './captureScreenshot';

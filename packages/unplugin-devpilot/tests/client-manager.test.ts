@@ -8,7 +8,7 @@ const minimalElement = {
   name: 'Go',
 };
 
-describe('ClientManager', () => {
+describe('clientManager', () => {
   it('claimTask removes queue entry and sets history in_progress', () => {
     const m = new ClientManager();
     m.addTask({
@@ -40,7 +40,7 @@ describe('ClientManager', () => {
     const appr = m.createCompletionApproval('task_done_1');
     expect(appr).toMatchObject({ token: expect.any(String) });
     if (!('token' in appr)) {
-      return
+      return;
     }
     const bad = m.completeTaskWithApproval('task_done_1', 'wrong');
     expect(bad).toEqual({ ok: false, error: expect.any(String) });
