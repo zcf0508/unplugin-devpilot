@@ -15,13 +15,15 @@ const RESOLVED_VIRTUAL_MODULE_ID = '\0virtual:devpilot-client';
 
 /**
  * Check if running in test environment
- * Vitest sets: VITEST, TEST, NODE_ENV=test
+ * Vitest sets: VITEST, TEST, NODE_ENV=test; Jest sets JEST_WORKER_ID; npm test sets npm_lifecycle_event=test
  */
 function isTestEnvironment(): boolean {
   return !!(
     process.env.VITEST
     || process.env.TEST
     || process.env.NODE_ENV === 'test'
+    || process.env.JEST_WORKER_ID
+    || process.env.npm_lifecycle_event === 'test'
   );
 }
 
@@ -100,11 +102,34 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
   = createUnplugin((rawOptions = {}) => {
     let options: OptionsResolved | null = null;
     let isDevServer = false;
+    /** Set from Vite `config` hook; `vite build` is always `command === 'build'` even when mode/env is non-production. */
+    let viteCommand: 'build' | 'serve' | undefined;
 
     const name = 'unplugin-devpilot';
 
+    /** WS/MCP only for local dev; skip tests, production NODE_ENV, npm `build` script, and Vite `vite build`. */
+    function shouldStartDevServers(): boolean {
+      if (isTestEnvironment()) {
+        return false;
+      }
+      if (process.env.NODE_ENV === 'production') {
+        return false;
+      }
+      if (process.env.npm_lifecycle_event === 'build') {
+        return false;
+      }
+      if (viteCommand === 'build') {
+        return false;
+      }
+      return true;
+    }
+
     async function ensureServersStarted(): Promise<OptionsResolved | null> {
       if (options) { return options; }
+      if (!shouldStartDevServers()) {
+        options = await resolveOptions(rawOptions);
+        return options;
+      }
       options = await startServers(rawOptions);
       return options;
     }
@@ -132,13 +157,13 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           if (!options) {
             options = await resolveOptions(rawOptions);
           }
-          return generateVirtualClientModule(options, process.env.NODE_ENV !== 'production');
+          return generateVirtualClientModule(options, shouldStartDevServers());
         }
       },
 
       async transform(code, id) {
-        // Skip in production or test mode
-        if (process.env.NODE_ENV === 'production' || isTestEnvironment()) {
+        // Align with shouldStartDevServers: no injection during build/test (incl. vite build w/ non-production NODE_ENV)
+        if (!shouldStartDevServers()) {
           return null;
         }
 
@@ -154,7 +179,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       },
 
       async buildStart() {
-        if (process.env.NODE_ENV === 'production' || isTestEnvironment()) {
+        if (!shouldStartDevServers()) {
           return;
         }
         if (isDevServer) { return; }
@@ -167,8 +192,11 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       },
 
       vite: {
+        config(_userConfig, env) {
+          viteCommand = env.command;
+        },
         async configureServer(server) {
-          if (isTestEnvironment()) { return; }
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           const opts = await ensureServersStarted();
           if (!opts) { return; }
@@ -194,6 +222,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       webpack(compiler) {
         // Configure dev server proxy before run
         compiler.hooks.beforeRun.tapPromise(name, async () => {
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           const opts = await ensureServersStarted();
           if (!opts) { return; }
@@ -239,6 +268,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           }
         });
         compiler.hooks.watchRun.tapPromise(name, async () => {
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           await ensureServersStarted();
         });
@@ -250,6 +280,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       rspack(compiler) {
         // Configure dev server proxy before run
         compiler.hooks.beforeRun.tapPromise(name, async () => {
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           const opts = await ensureServersStarted();
           if (!opts) { return; }
@@ -294,6 +325,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
           }
         });
         compiler.hooks.watchRun.tapPromise(name, async () => {
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           await ensureServersStarted();
         });
@@ -304,6 +336,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       farm: {
         async configureDevServer() {
+          if (!shouldStartDevServers()) { return; }
           isDevServer = true;
           const opts = await ensureServersStarted();
           if (!opts) { return; }
