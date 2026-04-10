@@ -89,6 +89,16 @@ Add this import to your project entry point to enable the devpilot client:
 import 'virtual:devpilot-client';
 ```
 
+For TypeScript projects, add type support for the virtual module in your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["unplugin-devpilot/virtual"]
+  }
+}
+```
+
 This import activates the WebSocket connection to the development server and initializes all registered plugins on the client side.
 
 ### Task UI (dev)

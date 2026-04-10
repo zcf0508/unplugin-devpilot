@@ -125,6 +125,16 @@ Add this import to your project entry point to enable the devpilot client:
 import 'virtual:devpilot-client';
 ```
 
+For TypeScript projects, add type support for the virtual module in your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["unplugin-devpilot/virtual"]
+  }
+}
+```
+
 This import activates the WebSocket connection to the development server and initializes all registered plugins on the client side.
 
 In dev, a **Lit + Shadow DOM** task overlay loads: **Tasks** polls the queue every second and lists pending + in progress; use **Get approval token** before **complete_task** in MCP. **Alt+Shift+I** enqueues a task; the agent uses **get_pending_tasks** (often with `clearAfterFetch: false`), **claim_task**, then **complete_task** with a developer-issued token. The **Devpilot** badge shows the pending count.
