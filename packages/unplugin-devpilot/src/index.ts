@@ -134,8 +134,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
     async function ensureServersStarted(): Promise<OptionsResolved | null> {
       if (options) { return options; }
       if (!shouldStartDevServers()) {
-        options = await resolveOptions(rawOptions);
-        return options;
+        return null;
       }
       options = await startServers(rawOptions);
       return options;
@@ -156,8 +155,7 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
 
       async load(id) {
         if (id === RESOLVED_VIRTUAL_MODULE_ID) {
-          // Skip in test mode - return empty module
-          if (isTestEnvironment()) {
+          if (!shouldStartDevServers()) {
             return '';
           }
 

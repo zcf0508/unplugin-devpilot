@@ -66,6 +66,16 @@ describe('resolveOptions', () => {
     const result = await resolveOptions({ mcpPort: 4000 });
     expect(result.mcpPort).toBe(4000);
   });
+
+  it('should keep validating ports in build-like option resolve', async () => {
+    mockCheckPort.mockResolvedValueOnce(3000);
+    mockCheckPort.mockResolvedValueOnce(false);
+
+    await expect(resolveOptions({ wsPort: 3000 })).rejects.toThrow(
+      'MCP port 3101 is already in use',
+    );
+    expect(mockCheckPort).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('resolveOptions port reuse across restarts', () => {
