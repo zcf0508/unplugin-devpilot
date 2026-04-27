@@ -1,14 +1,32 @@
 import type { PropertyValues } from 'lit';
+import type { DockPosition, DockSize, ViewportSize } from './dock-position.js';
 import type { PendingTask, TaskHistory, TaskSubmitPayload } from '../../core/types';
 import type { DevpilotClient } from '../types';
 import { css, html, LitElement } from 'lit';
 import { runTaskPayloadHooks } from '../index.js';
+import {
+  clampDockPoint,
+  clampDockPosition,
+  getDefaultDockPosition,
+  getTaskPanelPosition,
+  snapDockPosition,
+} from './dock-position.js';
 import {
   collectElementContext,
   shouldIgnorePickTarget,
 } from './task-element-info.js';
 
 interface Rect { top: number, left: number, width: number, height: number }
+
+interface DockDragState {
+  pointerId: number
+  startX: number
+  startY: number
+  originX: number
+  originY: number
+  moved: boolean
+  dock: HTMLElement
+}
 
 function formatRelativeAge(ts: number): string {
   const sec = Math.floor((Date.now() - ts) / 1000);
@@ -43,6 +61,9 @@ export class DevpilotTaskApp extends LitElement {
     _inProgressList: { state: true },
     _tasksLoading: { state: true },
     _approvalToast: { state: true },
+    _dockPosition: { state: true },
+    _dockSize: { state: true },
+    _draggingDock: { state: true },
   };
 
   declare inspectMode: boolean;
@@ -57,13 +78,20 @@ export class DevpilotTaskApp extends LitElement {
   declare _inProgressList: TaskHistory[];
   declare _tasksLoading: boolean;
   declare _approvalToast: string;
+  declare _dockPosition: DockPosition | null;
+  declare _dockSize: DockSize;
+  declare _draggingDock: boolean;
 
   devpilotClient: DevpilotClient | null = null;
 
   /** Raw DOM element kept across pick → submit so hooks can access it. */
   private _rawPickedElement: Element | null = null;
   private readonly sessionId: string;
+  private readonly dockStorageKey: string = 'devpilot:dock-position';
   private _pollTimer: ReturnType<typeof setInterval> | null = null;
+  private _resizeRaf: number | null = null;
+  private _dockDragState: DockDragState | null = null;
+  private _suppressNextDockClick: boolean = false;
   private _onTaskUpdate = () => {
     void this.loadDashboard();
   };
@@ -145,6 +173,74 @@ export class DevpilotTaskApp extends LitElement {
     this.userNote = '';
   };
 
+  private _onWindowResize = () => {
+    if (this._resizeRaf !== null) {
+      return;
+    }
+    this._resizeRaf = window.requestAnimationFrame(() => {
+      this._resizeRaf = null;
+      this.syncDockFromLayout({ preserveEdge: true, save: true });
+    });
+  };
+
+  private _onDockPointerMove = (e: PointerEvent) => {
+    const drag = this._dockDragState;
+    if (!drag || drag.pointerId !== e.pointerId) {
+      return;
+    }
+    const deltaX = e.clientX - drag.startX;
+    const deltaY = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) {
+      return;
+    }
+    drag.moved = true;
+    this._draggingDock = true;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const viewport = this.getViewportSize();
+    const point = clampDockPoint(
+      {
+        x: drag.originX + deltaX,
+        y: drag.originY + deltaY,
+      },
+      this._dockSize,
+      viewport,
+    );
+    this._dockPosition = snapDockPosition(point, this._dockSize, viewport);
+  };
+
+  private _onDockPointerUp = (e: PointerEvent) => {
+    const drag = this._dockDragState;
+    if (!drag || drag.pointerId !== e.pointerId) {
+      return;
+    }
+    this.detachDockDragListeners();
+    try {
+      drag.dock.releasePointerCapture(e.pointerId);
+    }
+    catch {
+      // Pointer capture is best-effort across browsers.
+    }
+
+    if (drag.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      this._suppressNextDockClick = true;
+      this._dockPosition = snapDockPosition(
+        this._dockPosition ?? { x: drag.originX, y: drag.originY },
+        this._dockSize,
+        this.getViewportSize(),
+      );
+      this.saveDockPosition();
+      window.setTimeout(() => {
+        this._suppressNextDockClick = false;
+      }, 0);
+    }
+    this._draggingDock = false;
+    this._dockDragState = null;
+  };
+
   constructor() {
     super();
     this.sessionId = globalThis.crypto?.randomUUID?.() ?? `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -160,6 +256,9 @@ export class DevpilotTaskApp extends LitElement {
     this._inProgressList = [];
     this._tasksLoading = false;
     this._approvalToast = '';
+    this._dockPosition = null;
+    this._dockSize = { width: 180, height: 42 };
+    this._draggingDock = false;
   }
 
   connectedCallback(): void {
@@ -167,6 +266,7 @@ export class DevpilotTaskApp extends LitElement {
     this.setAttribute('data-devpilot-task-ui', '');
     window.addEventListener('devpilot:taskUpdate', this._onTaskUpdate);
     window.addEventListener('keydown', this._onKeyDown, true);
+    window.addEventListener('resize', this._onWindowResize);
     void this.loadDashboard({ showLoading: true });
     this._pollTimer = setInterval(() => {
       void this.loadDashboard();
@@ -182,7 +282,17 @@ export class DevpilotTaskApp extends LitElement {
     document.documentElement.style.cursor = '';
     window.removeEventListener('devpilot:taskUpdate', this._onTaskUpdate);
     window.removeEventListener('keydown', this._onKeyDown, true);
+    window.removeEventListener('resize', this._onWindowResize);
+    if (this._resizeRaf !== null) {
+      window.cancelAnimationFrame(this._resizeRaf);
+      this._resizeRaf = null;
+    }
+    this.detachDockDragListeners();
     this._detachInspectListeners();
+  }
+
+  protected firstUpdated(): void {
+    this.syncDockFromLayout();
   }
 
   protected updated(changed: PropertyValues): void {
@@ -195,6 +305,103 @@ export class DevpilotTaskApp extends LitElement {
     if (changed.has('tasksPanelOpen') && this.tasksPanelOpen) {
       void this.loadDashboard({ showLoading: true });
     }
+    if (changed.has('pendingCount')) {
+      this.syncDockFromLayout({ preserveEdge: true, save: true });
+    }
+  }
+
+  private getViewportSize(): ViewportSize {
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+  }
+
+  private readDockSize(): DockSize {
+    const dock = this.renderRoot.querySelector<HTMLElement>('.dock');
+    if (!dock) {
+      return this._dockSize;
+    }
+    const rect = dock.getBoundingClientRect();
+    return {
+      width: Math.max(1, Math.ceil(rect.width), dock.scrollWidth),
+      height: Math.max(1, Math.ceil(rect.height), dock.scrollHeight),
+    };
+  }
+
+  private readStoredDockPosition(): DockPosition | null {
+    try {
+      const raw = window.localStorage.getItem(this.dockStorageKey);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw) as Partial<DockPosition>;
+      if (
+        typeof parsed.x === 'number'
+        && typeof parsed.y === 'number'
+        && (parsed.edge === 'left' || parsed.edge === 'right' || parsed.edge === 'top' || parsed.edge === 'bottom')
+      ) {
+        return parsed as DockPosition;
+      }
+    }
+    catch {
+      // Ignore unavailable or malformed storage in embedded dev pages.
+    }
+    return null;
+  }
+
+  private saveDockPosition(): void {
+    if (!this._dockPosition) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(this.dockStorageKey, JSON.stringify(this._dockPosition));
+    }
+    catch {
+      // Storage can be disabled; the dock still works for the session.
+    }
+  }
+
+  private syncDockFromLayout(options?: { preserveEdge?: boolean, save?: boolean }): void {
+    const viewport = this.getViewportSize();
+    const size = this.readDockSize();
+    const sizeChanged = size.width !== this._dockSize.width || size.height !== this._dockSize.height;
+    if (sizeChanged) {
+      this._dockSize = size;
+    }
+
+    const stored = this._dockPosition
+      ? null
+      : this.readStoredDockPosition();
+    const next = this._dockPosition
+      ? (
+          options?.preserveEdge
+            ? clampDockPosition(this._dockPosition, size, viewport)
+            : snapDockPosition(this._dockPosition, size, viewport)
+        )
+      : (
+          stored
+            ? clampDockPosition(stored, size, viewport)
+            : getDefaultDockPosition(viewport, size)
+        );
+
+    if (
+      !this._dockPosition
+      || next.x !== this._dockPosition.x
+      || next.y !== this._dockPosition.y
+      || next.edge !== this._dockPosition.edge
+    ) {
+      this._dockPosition = next;
+      if (options?.save) {
+        this.saveDockPosition();
+      }
+    }
+  }
+
+  private detachDockDragListeners(): void {
+    window.removeEventListener('pointermove', this._onDockPointerMove, true);
+    window.removeEventListener('pointerup', this._onDockPointerUp, true);
+    window.removeEventListener('pointercancel', this._onDockPointerUp, true);
   }
 
   private _attachInspectListeners(): void {
@@ -242,6 +449,105 @@ export class DevpilotTaskApp extends LitElement {
 
   private closeTasksPanel(): void {
     this.tasksPanelOpen = false;
+  }
+
+  private onDockPointerDown(e: PointerEvent): void {
+    if (e.button !== 0 && e.pointerType === 'mouse') {
+      return;
+    }
+    const target = e.target;
+    if (target instanceof Element && target.closest('.dock-tasks, .badge')) {
+      return;
+    }
+    const dock = e.currentTarget as HTMLElement;
+    const viewport = this.getViewportSize();
+    const current = this._dockPosition
+      ?? getDefaultDockPosition(viewport, this._dockSize);
+    this._dockDragState = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: current.x,
+      originY: current.y,
+      moved: false,
+      dock,
+    };
+    try {
+      dock.setPointerCapture(e.pointerId);
+    }
+    catch {
+      // Pointer capture is best-effort across browsers.
+    }
+    window.addEventListener('pointermove', this._onDockPointerMove, true);
+    window.addEventListener('pointerup', this._onDockPointerUp, true);
+    window.addEventListener('pointercancel', this._onDockPointerUp, true);
+  }
+
+  private consumeSuppressedDockClick(): boolean {
+    if (!this._suppressNextDockClick) {
+      return false;
+    }
+    this._suppressNextDockClick = false;
+    return true;
+  }
+
+  private onTasksToggleClick(): void {
+    if (this.consumeSuppressedDockClick()) {
+      return;
+    }
+    this.toggleTasksPanel();
+  }
+
+  private onBadgeClick(): void {
+    if (this.consumeSuppressedDockClick()) {
+      return;
+    }
+    this.toggleInspect();
+  }
+
+  private getDockStyle(): string {
+    if (!this._dockPosition) {
+      return '';
+    }
+    const edge = this._dockPosition.edge;
+    const minimizedOffset = 13;
+    const transform = edge === 'left' || edge === 'right'
+      ? 'translate(-50%, -50%) rotate(90deg)'
+      : 'translate(-50%, -50%)';
+    const minimizedTransform = edge === 'left'
+      ? `translate(calc(-50% - ${minimizedOffset}px), -50%) rotate(90deg)`
+      : edge === 'right'
+        ? `translate(calc(-50% + ${minimizedOffset}px), -50%) rotate(90deg)`
+        : edge === 'top'
+          ? `translate(-50%, calc(-50% - ${minimizedOffset}px))`
+          : `translate(-50%, calc(-50% + ${minimizedOffset}px))`;
+    return [
+      `left:${this._dockPosition.x}px`,
+      `top:${this._dockPosition.y}px`,
+      'right:auto',
+      'bottom:auto',
+      `--dock-transform:${transform}`,
+      `--dock-minimized-transform:${minimizedTransform}`,
+    ].join(';');
+  }
+
+  private getTasksPanelStyle(): string {
+    if (!this._dockPosition) {
+      return '';
+    }
+    const panel = getTaskPanelPosition(
+      this._dockPosition,
+      this._dockSize,
+      this.getViewportSize(),
+    );
+    return [
+      `left:${panel.x}px`,
+      `top:${panel.y}px`,
+      'right:auto',
+      'bottom:auto',
+      `width:${panel.width}px`,
+      `max-height:${panel.maxHeight}px`,
+    ].join(';');
   }
 
   private async loadDashboard(options?: { showLoading?: boolean }): Promise<void> {
@@ -379,6 +685,13 @@ export class DevpilotTaskApp extends LitElement {
   }
 
   render() {
+    const dockEdge = this._dockPosition?.edge ?? 'right';
+    const dockClass = [
+      'dock',
+      `edge-${dockEdge}`,
+      this._draggingDock ? 'is-dragging' : '',
+      this.menuOpen || this.tasksPanelOpen ? 'is-active' : '',
+    ].filter(Boolean).join(' ');
     return html`
       ${this.inspectMode
         ? html`<div class="inspect-banner" part="inspect-banner">Click an element to attach a task (Esc to exit)</div>`
@@ -393,7 +706,12 @@ export class DevpilotTaskApp extends LitElement {
               part="tasks-backdrop"
               @click=${() => this.closeTasksPanel()}
             ></div>
-            <section class="tasks-panel" part="tasks-panel" @click=${(e: Event) => e.stopPropagation()}>
+            <section
+              class="tasks-panel"
+              part="tasks-panel"
+              style=${this.getTasksPanelStyle()}
+              @click=${(e: Event) => e.stopPropagation()}
+            >
               <header class="tasks-header">
                 <h3 class="tasks-title">Tasks</h3>
                 <div class="tasks-header-actions">
@@ -450,29 +768,45 @@ export class DevpilotTaskApp extends LitElement {
             </div>
           `
         : null}
-      <div class="dock" part="dock">
+      <div
+        class=${dockClass}
+        part="dock"
+        style=${this.getDockStyle()}
+        title="Drag to move, release near an edge to dock"
+        @pointerdown=${(e: PointerEvent) => this.onDockPointerDown(e)}
+      >
         <button
           type="button"
-          class="dock-tasks ${this.tasksPanelOpen
-            ? 'is-open'
-            : ''}"
-          part="tasks-toggle"
-          title="View pending task queue"
-          ?aria-expanded=${this.tasksPanelOpen}
-          @click=${() => this.toggleTasksPanel()}
-        >
-          Tasks
-        </button>
-        <button
-          type="button"
-          class="badge"
-          part="badge"
+          class="dock-mark"
           title="Pick element (Alt+Shift+I)"
-          @click=${() => this.toggleInspect()}
+          @click=${() => this.onBadgeClick()}
         >
-          <span class="badge-label">Devpilot</span>
-          <span class="badge-count">${this.pendingCount}</span>
+          D
         </button>
+        <span class="dock-content">
+          <button
+            type="button"
+            class="dock-tasks ${this.tasksPanelOpen
+              ? 'is-open'
+              : ''}"
+            part="tasks-toggle"
+            title="View pending task queue"
+            ?aria-expanded=${this.tasksPanelOpen}
+            @click=${() => this.onTasksToggleClick()}
+          >
+            Tasks
+          </button>
+          <button
+            type="button"
+            class="badge"
+            part="badge"
+            title="Pick element (Alt+Shift+I)"
+            @click=${() => this.onBadgeClick()}
+          >
+            <span class="badge-label">Devpilot</span>
+            <span class="badge-count">${this.pendingCount}</span>
+          </button>
+        </span>
       </div>
     `;
   }
@@ -733,15 +1067,86 @@ export class DevpilotTaskApp extends LitElement {
       display: flex;
       flex-direction: row;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       z-index: 2147483003;
-      padding: 3px;
+      box-sizing: border-box;
+      width: max-content;
+      max-width: 34px;
+      min-width: 34px;
+      height: 34px;
+      padding: 2px;
       border-radius: 100px;
-      background: rgba(15, 23, 42, 0.85);
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.9);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+      opacity: 0.88;
+      transform: var(--dock-minimized-transform, translate(-50%, -50%));
+      transition:
+        max-width 0.45s ease,
+        padding 0.35s ease,
+        transform 0.35s ease,
+        opacity 0.2s ease,
+        box-shadow 0.35s ease,
+        background 0.2s ease;
+      touch-action: none;
+      user-select: none;
+      will-change: transform;
+    }
+    .dock:hover,
+    .dock:focus-within,
+    .dock.is-active,
+    .dock.is-dragging {
+      max-width: 220px;
+      padding: 2px;
+      opacity: 1;
+      transform: var(--dock-transform, translate(-50%, -50%));
+      background: rgba(15, 23, 42, 0.92);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24);
+    }
+    .dock.is-dragging {
+      cursor: grabbing;
+      transition: none;
+    }
+    .dock-mark {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      color: #0f172a;
+      background: linear-gradient(135deg, #67e8f9, #38bdf8);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      cursor: grab;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.28);
+    }
+    .dock-mark:hover {
+      background: linear-gradient(135deg, #7dd3fc, #38bdf8);
+    }
+    .dock.is-dragging .dock-mark {
+      cursor: grabbing;
+    }
+    .dock-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .dock:hover .dock-content,
+    .dock:focus-within .dock-content,
+    .dock.is-active .dock-content,
+    .dock.is-dragging .dock-content {
+      opacity: 1;
     }
     .dock-tasks {
       padding: 6px 14px;
