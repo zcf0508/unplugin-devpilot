@@ -1,7 +1,7 @@
 import type { PropertyValues } from 'lit';
-import type { DockPosition, DockSize, ViewportSize } from './dock-position.js';
 import type { PendingTask, TaskHistory, TaskSubmitPayload } from '../../core/types';
 import type { DevpilotClient } from '../types';
+import type { DockPosition, DockSize, ViewportSize } from './dock-position.js';
 import { css, html, LitElement } from 'lit';
 import { runTaskPayloadHooks } from '../index.js';
 import {
@@ -375,15 +375,15 @@ export class DevpilotTaskApp extends LitElement {
       : this.readStoredDockPosition();
     const next = this._dockPosition
       ? (
-          options?.preserveEdge
-            ? clampDockPosition(this._dockPosition, size, viewport)
-            : snapDockPosition(this._dockPosition, size, viewport)
-        )
+        options?.preserveEdge
+          ? clampDockPosition(this._dockPosition, size, viewport)
+          : snapDockPosition(this._dockPosition, size, viewport)
+      )
       : (
-          stored
-            ? clampDockPosition(stored, size, viewport)
-            : getDefaultDockPosition(viewport, size)
-        );
+        stored
+          ? clampDockPosition(stored, size, viewport)
+          : getDefaultDockPosition(viewport, size)
+      );
 
     if (
       !this._dockPosition
@@ -689,8 +689,12 @@ export class DevpilotTaskApp extends LitElement {
     const dockClass = [
       'dock',
       `edge-${dockEdge}`,
-      this._draggingDock ? 'is-dragging' : '',
-      this.menuOpen || this.tasksPanelOpen ? 'is-active' : '',
+      this._draggingDock
+        ? 'is-dragging'
+        : '',
+      this.menuOpen || this.tasksPanelOpen
+        ? 'is-active'
+        : '',
     ].filter(Boolean).join(' ');
     return html`
       ${this.inspectMode
