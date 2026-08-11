@@ -1,3 +1,5 @@
+
+
 # unplugin-devpilot
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zcf0508/unplugin-devpilot)
@@ -99,7 +101,7 @@ The WebSocket proxy is automatically configured in rspack-dev-server.
 import DomInspector from 'devpilot-plugin-dom-inspector';
 import Devpilot, { getProxyConfig } from 'unplugin-devpilot/farm';
 
-// Note: wsPort is the WebSocket server port (obtained from console output)
+// Note: Replace 60427 with the actual WebSocket port logged to the console when the dev server starts.
 export default defineConfig({
   plugins: [
     Devpilot({
