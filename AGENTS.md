@@ -4,7 +4,7 @@
 - esm module export is better than class
 - test cases prefer using `toMatchInlineSnapshot` instead of `toContain`
 - functions should not have circular references and should be relatively independent
-- `typecheck` and `test` need to be run to make sure the changed code works
+- `typecheck`、 `lint --fix` and `test` need to be run to make sure the changed code works
 - do not use ** Barrel Files **
 - skill.md needs to be limited to under 100 lines
 - check [README.md](README.md) [README_CN.md](README_CN.md) [README.md](./packages/unplugin-devpilot/README.md) [README.md](./packages/devpilot-plugin-dom-inspector/README.md) [skill](./packages/unplugin-devpilot/src/core/skill-generator.ts) [skill.md](./packages/devpilot-plugin-dom-inspector/src/skill.md) after any change
