@@ -4,6 +4,16 @@ import plugin from '../src/index';
 
 vi.mock('unplugin-devpilot/core/client-manager');
 
+function createPluginContext(storage = createStorage()) {
+  return {
+    wsPort: 3100,
+    storage,
+    root: process.cwd(),
+    mode: 'test',
+    env: {},
+  };
+}
+
 describe('mCP Tools - Node Side', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -37,7 +47,7 @@ describe('mCP Tools - Node Side', () => {
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
     const toolCalls = [
       { tool: 'query_selector', args: { selector: '.test', clientId: 'c_1' }, mock: mockClient.rpc.querySelector, isJson: true },
       { tool: 'get_visual_hierarchy', args: { clientId: 'c_1', maxDepth: 15 }, mock: mockClient.rpc.getLayout, isJson: false },
@@ -107,7 +117,7 @@ describe('mCP Tools - Node Side', () => {
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
     for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_1' } as any);
@@ -119,7 +129,7 @@ describe('mCP Tools - Node Side', () => {
     vi.mocked(clientManager.getClient).mockReturnValue(undefined);
     vi.mocked(clientManager.getAllClients).mockReturnValue([]);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
     for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_nonexistent' } as any);
@@ -128,7 +138,7 @@ describe('mCP Tools - Node Side', () => {
   });
 
   it('all tools should handle missing clientId', async () => {
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage: createStorage() }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
     for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ selector: '.test' } as any);
@@ -147,7 +157,7 @@ describe('mCP Tools - Node Side', () => {
       { clientId: 'c_2', level: 'error', message: 'Other client error', timestamp: 6000 },
     ]);
 
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext(storage)) || [];
     const toolDef = tools.find(t => t().name === 'get_console_logs');
 
     const allResult = await toolDef!().cb({ clientId: 'c_1', level: 'all', limit: 100 } as any);
@@ -180,7 +190,7 @@ describe('mCP Tools - Node Side', () => {
 
   it('get_console_logs should return empty array when no logs in storage', async () => {
     const storage = createStorage();
-    const tools = plugin.mcpSetup?.({ wsPort: 3100, storage }) || [];
+    const tools = plugin.mcpSetup?.(createPluginContext(storage)) || [];
     const toolDef = tools.find(t => t().name === 'get_console_logs');
 
     const result = await toolDef!().cb({ clientId: 'c_1', level: 'all', limit: 100 } as any);

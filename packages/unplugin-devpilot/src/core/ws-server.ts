@@ -4,6 +4,7 @@ import { createBirpc } from 'birpc';
 import { uniqueId } from 'es-toolkit/compat';
 import { WebSocketServer } from 'ws';
 import { clientManager } from './client-manager';
+import { buildPluginContext } from './plugin';
 import { getPluginStorage } from './storage';
 
 let wss: WebSocketServer | null = null;
@@ -20,7 +21,7 @@ export function registerPluginServerMethods(plugins: DevpilotPlugin[]): void {
   for (const plugin of plugins) {
     if (plugin.serverSetup) {
       try {
-        const ctx = { wsPort: 0, storage: getPluginStorage(plugin.namespace) };
+        const ctx = buildPluginContext({ wsPort: 0 }, plugin.namespace);
         const methods = plugin.serverSetup(ctx);
         pluginServerMethods[plugin.namespace] = methods;
       }

@@ -4,7 +4,7 @@ import { dirname, extname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { getBuiltinToolNames } from './builtin-tools';
-import { getPluginStorage } from './storage';
+import { buildPluginContext } from './plugin';
 import { resolveModule } from './utils';
 
 /**
@@ -97,7 +97,7 @@ async function getPluginSkillModules(plugins: DevpilotPlugin[], options: Options
   for (const p of plugins) {
     if (!p.skillModule) { continue; }
 
-    const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
+    const ctx = buildPluginContext(options, p.namespace);
     const mod = typeof p.skillModule === 'function'
       ? p.skillModule(ctx)
       : p.skillModule!;
@@ -127,7 +127,7 @@ function collectAllowedTools(plugins: DevpilotPlugin[], options: OptionsResolved
   for (const plugin of plugins) {
     if (plugin.mcpSetup) {
       try {
-        const ctx = { wsPort: options.wsPort, storage: getPluginStorage(plugin.namespace) };
+        const ctx = buildPluginContext(options, plugin.namespace);
         const mcps = plugin.mcpSetup(ctx);
         for (const register of mcps) {
           const result = register();

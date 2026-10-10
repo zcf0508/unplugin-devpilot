@@ -1,4 +1,4 @@
-import type { DevpilotPlugin } from '../src';
+import type { DevpilotPlugin, DevpilotPluginContext } from '../src';
 import { createStorage } from 'unstorage';
 
 // Test plugin interface and types
@@ -27,7 +27,13 @@ describe('plugin Server Methods Extension', () => {
       }),
     };
 
-    const methods = plugin.serverSetup?.({ wsPort: 3000, storage: createStorage() });
+    const methods = plugin.serverSetup?.({
+      wsPort: 3000,
+      storage: createStorage(),
+      root: process.cwd(),
+      mode: 'test',
+      env: {},
+    });
     expect(methods).toBeDefined();
     expect(typeof methods?.fetchData).toBe('function');
   });
@@ -42,12 +48,38 @@ describe('plugin Server Methods Extension', () => {
       }),
     };
 
-    const methods = plugin.serverSetup?.({ wsPort: 3000, storage: createStorage() });
+    const methods = plugin.serverSetup?.({
+      wsPort: 3000,
+      storage: createStorage(),
+      root: process.cwd(),
+      mode: 'test',
+      env: {},
+    });
     expect(Object.keys(methods || {}).length).toBe(3);
   });
 });
 
 describe('plugin Type System', () => {
+  it('keeps legacy context construction and client callbacks source-compatible', () => {
+    const legacyContext: DevpilotPluginContext = {
+      wsPort: 3000,
+      storage: createStorage(),
+    };
+    const plugin: DevpilotPlugin = {
+      namespace: 'legacy-plugin',
+      clientModule: (ctx: DevpilotPluginContext) => `./${ctx.wsPort}/client.ts`,
+      serverSetup: (ctx) => {
+        const root: string = ctx.root;
+        const mode: string = ctx.mode;
+        const token: string | undefined = ctx.env.MG_MCP_TOKEN;
+        return { root: () => root, mode: () => mode, token: () => token };
+      },
+    };
+
+    expect(legacyContext.wsPort).toBe(3000);
+    expect(typeof plugin.clientModule).toBe('function');
+  });
+
   it('should validate plugin structure', () => {
     // Valid plugin with all properties
     const plugin1: DevpilotPlugin = {

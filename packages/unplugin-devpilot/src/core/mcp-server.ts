@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { version } from '../../package.json';
 import { getBuiltinTools } from './builtin-tools';
-import { getPluginStorage } from './storage';
+import { buildPluginContext } from './plugin';
 
 let httpServer: Server | null = null;
 
@@ -22,7 +22,7 @@ export function registerPluginMcpRegisterMethods(plugins: DevpilotPlugin[]): voi
   for (const plugin of plugins) {
     if (plugin.mcpSetup) {
       try {
-        const ctx = { wsPort: 0, storage: getPluginStorage(plugin.namespace) };
+        const ctx = buildPluginContext({ wsPort: 0 }, plugin.namespace);
         const mcps = plugin.mcpSetup(ctx);
         mcpRegeisterMethods[plugin.namespace] = mcps;
       }

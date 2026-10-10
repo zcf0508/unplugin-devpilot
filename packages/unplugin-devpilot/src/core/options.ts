@@ -1,4 +1,4 @@
-import type { DevpilotPluginContext, McpToolRegister } from './plugin';
+import type { DevpilotClientContext, DevpilotResolvedPluginContext, McpToolRegister } from './plugin';
 import { checkPort, getRandomPort } from 'get-port-please';
 
 export { WS_PROXY_PATH } from './constants';
@@ -26,13 +26,13 @@ export interface DevpilotPlugin {
    * clientModule: resolveClientModule(import.meta.url, './client.ts')
    * ```
    */
-  clientModule?: string | ((ctx: DevpilotPluginContext) => string)
+  clientModule?: string | ((ctx: DevpilotClientContext) => string)
   /**
    * Setup server-side RPC methods for this plugin
    * These methods can be called from the client via rpcCall()
    */
-  serverSetup?: (ctx: DevpilotPluginContext) => Record<string, (...args: any[]) => any>
-  mcpSetup?: (ctx: DevpilotPluginContext) => Array<() => McpToolRegister>
+  serverSetup?: (ctx: DevpilotResolvedPluginContext) => Record<string, (...args: any[]) => any>
+  mcpSetup?: (ctx: DevpilotResolvedPluginContext) => Array<() => McpToolRegister>
   /**
    * The skill module path to be injected
    * - npm package path: 'my-plugin/skill'
@@ -46,7 +46,7 @@ export interface DevpilotPlugin {
    * skillModule: resolveSkillModule(import.meta.url, './skill.md')
    * ```
    */
-  skillModule?: string | ((ctx: DevpilotPluginContext) => string)
+  skillModule?: string | ((ctx: DevpilotResolvedPluginContext) => string)
 }
 
 export interface Options {

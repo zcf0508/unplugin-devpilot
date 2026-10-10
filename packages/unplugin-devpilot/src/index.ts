@@ -6,8 +6,9 @@ import { injectSourceLocation } from './core/code-location-injector';
 import { WS_PROXY_PATH } from './core/constants';
 import { registerPluginMcpRegisterMethods, startMcpServer, stopMcpServer } from './core/mcp-server';
 import { resolveOptions } from './core/options';
+import { buildClientPluginContext, configurePluginContext } from './core/plugin';
 import { generateCoreSkill } from './core/skill-generator';
-import { disposeStorage, getPluginStorage } from './core/storage';
+import { disposeStorage } from './core/storage';
 import { registerPluginServerMethods, startWebSocketServer, stopWebSocketServer } from './core/ws-server';
 
 const VIRTUAL_MODULE_ID = 'virtual:devpilot-client';
@@ -31,7 +32,7 @@ function getPluginClientModules(plugins: DevpilotPlugin[], options: OptionsResol
   return plugins
     .filter(p => p.clientModule)
     .map((p) => {
-      const ctx = { wsPort: options.wsPort, storage: getPluginStorage(p.namespace) };
+      const ctx = buildClientPluginContext(options, p.namespace);
       const mod = typeof p.clientModule === 'function'
         ? p.clientModule(ctx)
         : p.clientModule!;
@@ -199,6 +200,9 @@ export const unpluginDevpilot: UnpluginInstance<Options | undefined, false>
       vite: {
         config(_userConfig, env) {
           viteCommand = env.command;
+        },
+        async configResolved(config) {
+          await configurePluginContext(config);
         },
         async configureServer(server) {
           if (!shouldStartDevServers()) { return; }
@@ -369,7 +373,7 @@ process.on('beforeExit', () => {
 export { clientManager } from './core/client-manager';
 export type { DevpilotPlugin, Options } from './core/options';
 export default unpluginDevpilot;
-export type { DevpilotPluginContext, McpToolRegister } from './core/plugin';
+export type { DevpilotClientContext, DevpilotPluginContext, DevpilotResolvedPluginContext, McpToolRegister } from './core/plugin';
 export { resolveClientModule } from './core/plugin';
 export { defineMcpToolRegister, type McpToolResolved } from './core/plugin/mcp';
 export { resolveSkillModule } from './core/skill-generator';
