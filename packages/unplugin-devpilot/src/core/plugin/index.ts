@@ -1,5 +1,5 @@
-import type { OptionsResolved } from '../options';
 import type { Storage } from 'unstorage';
+import type { OptionsResolved } from '../options';
 import process from 'node:process';
 import { getPluginStorage } from '../storage';
 import { resolveModule } from '../utils';
@@ -41,10 +41,13 @@ export async function configurePluginContext(config: {
   envDir?: string | false
 }): Promise<void> {
   const { loadEnv } = await import('vite');
+  const envDir = typeof config.envDir === 'string'
+    ? config.envDir
+    : config.root;
   pluginRoot = config.root;
   pluginMode = config.mode;
   pluginEnv = {
-    ...loadEnv(config.mode, typeof config.envDir === 'string' ? config.envDir : config.root, ''),
+    ...loadEnv(config.mode, envDir, ''),
     ...process.env,
   };
 }
