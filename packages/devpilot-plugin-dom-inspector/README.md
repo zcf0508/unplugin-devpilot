@@ -54,12 +54,15 @@ Analyze visual hierarchy by detecting which child elements fully cover their par
 
 ### 3. `get_element_details`
 
-Get comprehensive element information including HTML attributes, accessibility info, and position.
+Get comprehensive element information including HTML attributes, accessibility info, position, and optionally computed styles.
 
 **Parameters:**
 - `selector` (string): Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Can match multiple elements.
 - `includeChildren` (boolean, optional, default: false): Include children tree in the result
 - `maxDepth` (number, optional, default: 5): Maximum depth for children tree (only used if includeChildren is true)
+- `includeStyles` (boolean, optional, default: false): Include computed styles (browser-resolved values from `getComputedStyle`, e.g. `rgb()` colors) for matched elements
+- `styleProps` (string[], optional): CSS properties to read (kebab-case or camelCase). Only used when `includeStyles` is true; defaults to a curated set of common properties
+- `pseudo` (`"::before"` | `"::after"`, optional): Also read computed styles for this pseudo-element
 - `clientId` (string, **required**): Target client ID. Use `list_clients` to find available clients.
 
 **Returns:**
@@ -68,6 +71,7 @@ Get comprehensive element information including HTML attributes, accessibility i
   - Accessibility info: role, name, value, description
   - Position info: rect (x, y, width, height)
   - Optional children tree (accessibility nodes)
+  - Optional `styles` / `pseudoStyles` (requested via `includeStyles` / `pseudo`): computed style values keyed by the requested property names; values are browser-resolved (`rgb()`, `px`, ...), not the authored values. `pseudoNote` appears when a requested pseudo-element is not generated
 
 ### 4. `click_element`
 

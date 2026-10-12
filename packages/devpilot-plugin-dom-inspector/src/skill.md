@@ -79,7 +79,7 @@ Add console.time/PerformanceObserver → click_element to trigger
 - **Compare with design?** → `capture_screenshot`
 - **Runtime data?** → `get_console_logs` with `keyword` / `level`
 - **Element off-screen?** → `scroll_to_element` before snapshot
-- **Computed styles / position?** → `get_element_details`
+- **Computed styles / position?** → `get_element_details` + `includeStyles: true` (narrow with `styleProps: ["font-weight"]`; `pseudo: "::before"` for pseudo-elements)
 
 ## Anti-Patterns
 
