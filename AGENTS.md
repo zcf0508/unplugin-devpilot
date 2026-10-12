@@ -1,4 +1,4 @@
-- never fix lint error
+- using `lint --fix` to autofix lint errors
 - always fix type error
 - core modules need unit test coverage, but avoid writing tests blindly—only cover essential modules, and tests should not verify logic from third-party libraries
 - esm module export is better than class
