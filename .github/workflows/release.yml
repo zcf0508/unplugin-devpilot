@@ -34,12 +34,14 @@ jobs:
 
       - name: Publish unplugin-devpilot to NPM
         run: |
+          pnpm run build
           TARBALL=$(pnpm pack --pack-destination "$RUNNER_TEMP" | tail -n 1)
           npm publish "$TARBALL" --access public
         working-directory: ./packages/unplugin-devpilot
 
       - name: Publish devpilot-plugin-dom-inspector to NPM
         run: |
+          pnpm run build
           TARBALL=$(pnpm pack --pack-destination "$RUNNER_TEMP" | tail -n 1)
           npm publish "$TARBALL" --access public
         working-directory: ./packages/devpilot-plugin-dom-inspector
