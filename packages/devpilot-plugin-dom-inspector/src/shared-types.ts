@@ -38,29 +38,50 @@ export interface ElementInfo {
   error?: string
 }
 
+export type PseudoElementSelector = '::before' | '::after';
+
+export interface GetElementDetailsOptions {
+  includeChildren?: boolean
+  maxDepth?: number
+  /** Include computed styles (browser-resolved values from getComputedStyle, e.g. rgb() colors) for matched elements. */
+  includeStyles?: boolean
+  /** CSS properties to read (kebab-case or camelCase). Only used when includeStyles is true; defaults to a curated set. */
+  styleProps?: string[]
+  /** Also read this pseudo-element's computed styles into `pseudoStyles`. */
+  pseudo?: PseudoElementSelector
+}
+
+export interface ElementDetailsItem {
+  // Basic info
+  devpilotId: string
+  tag: string
+  text: string
+  attributes: Record<string, string>
+  // Accessibility info
+  role: string
+  name: string | null
+  value?: string
+  description?: string
+  // Position info
+  rect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  // Optional children tree (accessibility nodes only)
+  children?: AccessibilityNode[]
+  // Computed styles, keyed by the requested property names (only present when requested via includeStyles)
+  styles?: Record<string, string>
+  // Computed styles of the requested pseudo-element (only present when requested and generated)
+  pseudoStyles?: Partial<Record<PseudoElementSelector, Record<string, string>>>
+  // Present when a pseudo-element was requested but is not generated for this element
+  pseudoNote?: string
+}
+
 export interface ElementDetails {
   success: boolean
-  elements?: Array<{
-    // Basic info
-    devpilotId: string
-    tag: string
-    text: string
-    attributes: Record<string, string>
-    // Accessibility info
-    role: string
-    name: string | null
-    value?: string
-    description?: string
-    // Position info
-    rect: {
-      x: number
-      y: number
-      width: number
-      height: number
-    }
-    // Optional children tree (accessibility nodes only)
-    children?: AccessibilityNode[]
-  }>
+  elements?: ElementDetailsItem[]
   error?: string
 }
 
@@ -171,14 +192,17 @@ export interface DomInspectorRpc {
   getElementInfoById: (id: string) => Promise<ElementInfo>
 
   /**
-   * Get detailed element information (unified method combining HTML + accessibility info)
+   * Get detailed element information (unified method combining HTML + accessibility info + optional computed styles)
    * @param selector - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
    * @param options.includeChildren - Include children tree in the result
    * @param options.maxDepth - Maximum depth for children tree
+   * @param options.includeStyles - Include getComputedStyle values for matched elements
+   * @param options.styleProps - CSS properties to read (defaults to a curated set; only used when includeStyles is true)
+   * @param options.pseudo - Also read this pseudo-element's computed styles
    */
   getElementDetails: (
     selector: string,
-    options?: { includeChildren?: boolean, maxDepth?: number },
+    options?: GetElementDetailsOptions,
   ) => Promise<ElementDetails>
 
   /**

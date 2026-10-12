@@ -1,11 +1,12 @@
-import type { ElementDetails } from '../shared-types';
+import type { ElementDetails, ElementDetailsItem, GetElementDetailsOptions } from '../shared-types';
 import { buildAccessibilityTree, getVisibleText, IMPORTANT_ATTRS } from './utils';
+import { DEFAULT_STYLE_PROPS, isPseudoElementGenerated, readComputedStyles } from './utils/computedStyles';
 import { generateSelectorNotFoundError, resolveElementsBySelector } from './utils/resolveSelector';
 
 // Get detailed element information (HTML + accessibility + position)
 function _getElementDetails(
   selector: string,
-  options?: { includeChildren?: boolean, maxDepth?: number },
+  options?: GetElementDetailsOptions,
 ): ElementDetails {
   const elements = resolveElementsBySelector(selector);
 
@@ -18,6 +19,8 @@ function _getElementDetails(
 
   const maxDepth = options?.maxDepth ?? 5;
   const includeChildren = options?.includeChildren ?? false;
+  const includeStyles = options?.includeStyles ?? false;
+  const pseudo = options?.pseudo;
 
   const results = elements.map((element) => {
     // Get HTML info
@@ -53,7 +56,7 @@ function _getElementDetails(
     // Get position info
     const rect = element.getBoundingClientRect();
 
-    return {
+    const item: ElementDetailsItem = {
       devpilotId: accessibilityNode?.devpilotId || '',
       tag,
       text,
@@ -72,6 +75,26 @@ function _getElementDetails(
         ? accessibilityNode?.children
         : undefined,
     };
+
+    if (includeStyles) {
+      const props = options?.styleProps?.length
+        ? options.styleProps
+        : DEFAULT_STYLE_PROPS;
+      item.styles = readComputedStyles(element, props);
+
+      if (pseudo) {
+        if (isPseudoElementGenerated(element, pseudo)) {
+          const pseudoStyles: Partial<Record<typeof pseudo, Record<string, string>>> = {};
+          pseudoStyles[pseudo] = readComputedStyles(element, props, { pseudo });
+          item.pseudoStyles = pseudoStyles;
+        }
+        else {
+          item.pseudoNote = `${pseudo} not found on this element`;
+        }
+      }
+    }
+
+    return item;
   });
 
   return {
@@ -82,7 +105,7 @@ function _getElementDetails(
 
 export async function getElementDetails(
   selector: string,
-  options?: { includeChildren?: boolean, maxDepth?: number },
+  options?: GetElementDetailsOptions,
 ): Promise<ElementDetails> {
   try {
     console.log('[devpilot-dom-inspector] getElementDetails called with:', selector, options);

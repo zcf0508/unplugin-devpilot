@@ -106,6 +106,36 @@ describe('mCP Tools - Node Side', () => {
     }
   });
 
+  it('get_element_details should pass style options through to the client', async () => {
+    const mockClient = {
+      rpc: {
+        getElementDetails: vi.fn().mockResolvedValue({ success: true, elements: [] }),
+      },
+    };
+    vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
+
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
+    const toolDef = tools.find(t => t().name === 'get_element_details');
+
+    await toolDef!().cb({
+      selector: 'e1',
+      clientId: 'c_1',
+      includeChildren: true,
+      maxDepth: 3,
+      includeStyles: true,
+      styleProps: ['font-weight'],
+      pseudo: '::before',
+    } as any);
+
+    expect(mockClient.rpc.getElementDetails).toHaveBeenCalledWith('e1', {
+      includeChildren: true,
+      maxDepth: 3,
+      includeStyles: true,
+      styleProps: ['font-weight'],
+      pseudo: '::before',
+    });
+  });
+
   it('all tools should handle errors correctly', async () => {
     const mockClient = {
       rpc: {

@@ -273,18 +273,27 @@ export default <DevpilotPlugin>{
         'get_element_details',
         {
           title: 'Get Element Details',
-          description: 'Get comprehensive element information including HTML attributes, accessibility info, and position. Combines functionality of query_selector and get_element_info_by_id. Supports devpilot-id or CSS selector.',
+          description: 'Get comprehensive element information including HTML attributes, accessibility info, position, and optionally computed styles. Combines functionality of query_selector and get_element_info_by_id. Supports devpilot-id or CSS selector.',
           inputSchema: z.object({
             selector: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Can match multiple elements.'),
             includeChildren: z.boolean().optional().default(false).describe('Include children tree in the result'),
             maxDepth: z.number().optional().default(5).describe('Maximum depth for children tree (only used if includeChildren is true)'),
+            includeStyles: z.boolean().optional().default(false).describe('Include computed styles (browser-resolved values from getComputedStyle, e.g. rgb() colors) for matched elements. Combine with styleProps to narrow properties, or pseudo to read a pseudo-element'),
+            styleProps: z.array(z.string()).optional().describe('CSS property names to read (kebab-case or camelCase). Only used when includeStyles is true; defaults to a curated set of common properties'),
+            pseudo: z.enum(['::before', '::after']).optional().describe('Also read computed styles for this pseudo-element (returned separately in pseudoStyles). Requires includeStyles: true'),
             clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
           }),
         },
         async (params) => {
-          const { selector, includeChildren, maxDepth, clientId } = params;
+          const { selector, includeChildren, maxDepth, includeStyles, styleProps, pseudo, clientId } = params;
           const result = await handleClientRpc(clientId, async (client) => {
-            return await client.rpc.getElementDetails(selector, { includeChildren, maxDepth });
+            return await client.rpc.getElementDetails(selector, {
+              includeChildren,
+              maxDepth,
+              includeStyles,
+              styleProps,
+              pseudo,
+            });
           });
           return toMcpResponse(result);
         },
