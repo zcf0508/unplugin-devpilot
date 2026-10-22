@@ -252,6 +252,38 @@ description: Folder skill description.
       expect(coreContent).toContain('- [folder-plugin](./folder-plugin/index.md) - Folder skill description.');
     });
 
+    it('should fall back to SKILL.md when index.md is empty', async () => {
+      const mockPlugin = {
+        namespace: 'folder-plugin',
+        skillModule: 'file:///test/plugin/skills',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      const skillContent = `---
+description: Description kept in SKILL.md.
+---
+
+# Folder Skill
+`;
+      (fs.stat as any).mockResolvedValue({ isDirectory: () => true });
+      (fs.access as any).mockResolvedValue(undefined);
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skills/index.md') {
+          return Promise.resolve('');
+        }
+        if (path === '/test/plugin/skills/SKILL.md') {
+          return Promise.resolve(skillContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await generateCoreSkill(mockOptions, true);
+
+      const coreContent = (fs.writeFile as any).mock.calls.at(-1)[1];
+      expect(coreContent).toContain('- [folder-plugin](./folder-plugin/SKILL.md) - Description kept in SKILL.md.');
+    });
+
     it('should fall back to the namespace when the skill has no description', async () => {
       const mockPlugin = {
         namespace: 'plain-plugin',

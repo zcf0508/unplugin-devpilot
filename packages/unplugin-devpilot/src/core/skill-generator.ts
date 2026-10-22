@@ -88,6 +88,8 @@ interface PluginSkillModule extends SkillEntryLocation {
   namespace: string
   /** Frontmatter description of the entry file, used to describe the skill in the core skill. */
   description?: string
+  /** Directory skills only: the file the entry content came from, used to build the link. */
+  entryFile?: DirectoryEntryFile
 }
 
 interface SkillEntryLocation {
@@ -96,24 +98,38 @@ interface SkillEntryLocation {
   hasIndexMd: boolean
 }
 
+type DirectoryEntryFile = 'index.md' | 'SKILL.md';
+
+interface SkillEntry {
+  content?: string
+  /** Directory skills only: set when a non-empty entry file was read. */
+  entryFile?: DirectoryEntryFile
+}
+
 /**
  * Read the skill entry file so its frontmatter can describe the skill in the core skill
- * Directory skills use index.md, falling back to SKILL.md
- * Returns undefined when no entry file can be read
+ * Directory skills use a non-empty index.md, falling back to SKILL.md
+ * An empty entry file yields no content, so the caller also skips its link
  */
-async function readSkillEntryFile(skill: SkillEntryLocation): Promise<string | undefined> {
+async function readSkillEntry(skill: SkillEntryLocation): Promise<SkillEntry> {
   if (!skill.isDirectory) {
-    return readFileOrUndefined(skill.path);
+    return { content: await readFileOrUndefined(skill.path) };
   }
 
   if (skill.hasIndexMd) {
     const indexContent = await readFileOrUndefined(join(skill.path, 'index.md'));
-    if (indexContent !== undefined) {
-      return indexContent;
+    // An empty index.md carries no frontmatter, so keep looking for SKILL.md
+    if (indexContent) {
+      return { content: indexContent, entryFile: 'index.md' };
     }
   }
 
-  return readFileOrUndefined(join(skill.path, 'SKILL.md'));
+  const skillContent = await readFileOrUndefined(join(skill.path, 'SKILL.md'));
+  if (skillContent) {
+    return { content: skillContent, entryFile: 'SKILL.md' };
+  }
+
+  return {};
 }
 
 async function readFileOrUndefined(path: string): Promise<string | undefined> {
@@ -152,7 +168,7 @@ async function getPluginSkillModules(
     // Check if index.md exists (only for directories)
     const hasIndex = isDir && await hasIndexMd(skillPath);
 
-    const entryContent = await readSkillEntryFile({
+    const entry = await readSkillEntry({
       path: skillPath,
       isDirectory: isDir,
       hasIndexMd: hasIndex,
@@ -163,8 +179,9 @@ async function getPluginSkillModules(
       path: skillPath,
       isDirectory: isDir,
       hasIndexMd: hasIndex,
-      description: entryContent
-        ? parseSkillFrontmatter(entryContent).description
+      entryFile: entry.entryFile,
+      description: entry.content
+        ? parseSkillFrontmatter(entry.content).description
         : undefined,
     });
   }
@@ -217,13 +234,13 @@ async function generateCoreSkillContent(options: OptionsResolved, isDev: boolean
   const pluginSkills = await getPluginSkillModules(options.plugins, options);
 
   const skillList = pluginSkills.map((skill) => {
-    // For directories with index.md, link to index.md
-    // For directories without index.md, link to the folder itself (let LLM find the entry)
+    // For directories, link to the entry file that was actually read
+    // For directories without an entry file, link to the folder itself (let LLM explore)
     // For files, link to the namespace.md file
     let linkPath: string;
     if (skill.isDirectory) {
-      linkPath = skill.hasIndexMd
-        ? `./${skill.namespace}/index.md`
+      linkPath = skill.entryFile
+        ? `./${skill.namespace}/${skill.entryFile}`
         : `./${skill.namespace}/`;
     }
     else {
