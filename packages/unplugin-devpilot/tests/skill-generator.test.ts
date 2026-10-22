@@ -10,6 +10,8 @@ vi.mock('node:fs', () => ({
     writeFile: vi.fn(),
     unlink: vi.fn(),
     readFile: vi.fn(),
+    stat: vi.fn(),
+    access: vi.fn(),
     chmod: vi.fn(),
     chown: vi.fn(),
     readdir: vi.fn().mockResolvedValue([]),
@@ -58,6 +60,9 @@ describe('skill-generator', () => {
     beforeEach(() => {
       vi.clearAllMocks();
       (fs.readdir as any).mockResolvedValue([]);
+      (fs.readFile as any).mockRejectedValue(new Error('ENOENT'));
+      (fs.stat as any).mockRejectedValue(new Error('ENOENT'));
+      (fs.access as any).mockRejectedValue(new Error('ENOENT'));
       mockOptions = {
         wsPort: 3100,
         mcpPort: 3101,
@@ -185,6 +190,87 @@ describe('skill-generator', () => {
         - **MCP Port**: 3101
         "
       `);
+    });
+
+    it('should describe each plugin skill with its frontmatter description', async () => {
+      const mockPlugin = {
+        namespace: 'builtin-dom-inspector',
+        skillModule: 'file:///test/plugin/skill.md',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      const skillContent = `---
+name: dom-inspector
+description: Advanced DOM inspection and interaction capabilities. Allows analyzing page layout.
+allowed-tools: ["get_page_snapshot"]
+---
+
+# DOM Inspector Skill
+`;
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skill.md') {
+          return Promise.resolve(skillContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await generateCoreSkill(mockOptions, true);
+
+      const coreContent = (fs.writeFile as any).mock.calls.at(-1)[1];
+      expect(coreContent).toContain(
+        '- [builtin-dom-inspector](./builtin-dom-inspector.md) - Advanced DOM inspection and interaction capabilities. Allows analyzing page layout.',
+      );
+    });
+
+    it('should read the description from index.md for directory skills', async () => {
+      const mockPlugin = {
+        namespace: 'folder-plugin',
+        skillModule: 'file:///test/plugin/skills',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      const indexContent = `---
+description: Folder skill description.
+---
+
+# Folder Skill
+`;
+      (fs.stat as any).mockResolvedValue({ isDirectory: () => true });
+      (fs.access as any).mockResolvedValue(undefined);
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skills/index.md') {
+          return Promise.resolve(indexContent);
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await generateCoreSkill(mockOptions, true);
+
+      const coreContent = (fs.writeFile as any).mock.calls.at(-1)[1];
+      expect(coreContent).toContain('- [folder-plugin](./folder-plugin/index.md) - Folder skill description.');
+    });
+
+    it('should fall back to the namespace when the skill has no description', async () => {
+      const mockPlugin = {
+        namespace: 'plain-plugin',
+        skillModule: 'file:///test/plugin/skill.md',
+      };
+
+      mockOptions.plugins = [mockPlugin as any];
+
+      (fs.readFile as any).mockImplementation((path: string) => {
+        if (path === '/test/plugin/skill.md') {
+          return Promise.resolve('# Plain Skill\n\nNo frontmatter here.');
+        }
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await generateCoreSkill(mockOptions, true);
+
+      const coreContent = (fs.writeFile as any).mock.calls.at(-1)[1];
+      expect(coreContent).toContain('- [plain-plugin](./plain-plugin.md) - plain-plugin capabilities');
     });
 
     it('should not generate skill file in production mode', async () => {

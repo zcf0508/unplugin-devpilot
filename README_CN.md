@@ -328,7 +328,10 @@ skillModule: resolveModule(import.meta.url, './skills');
 
 - 核心指令保持在 100 行以内
 - 包含工具描述、参数说明和使用示例
+- 在 frontmatter 的 `description` 中写清适用场景；主 skill 会直接引用这段文字，让 agent 在读取前就能判断该用哪个插件
 - 对于复杂插件，使用文件夹模式组织多个 `.md` 文件
+
+主 skill 生成的 `Available Skills` 列表中，每个条目由 `namespace` 与入口文件的 frontmatter `description` 组成。单文件模式读取 `{namespace}.md` 自身；文件夹模式优先读取 `index.md`，没有则回退 `SKILL.md`。未提供 `description` 时回退为 `{namespace} capabilities`。
 
 ### 插件存储
 

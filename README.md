@@ -327,7 +327,10 @@ When using a folder:
 
 - Keep under 100 lines for core instructions
 - Include tool descriptions, parameters, and usage examples
+- Put the applicable scope in the frontmatter `description`; the core skill quotes it verbatim so agents can pick the right plugin before reading the file
 - For complex plugins, use folder mode with multiple `.md` files
+
+Each `Available Skills` entry in the generated core skill combines the `namespace` with the frontmatter `description` of the entry file. Single-file skills read `{namespace}.md` itself; folder skills prefer `index.md` and fall back to `SKILL.md`. Without a `description`, the entry falls back to `{namespace} capabilities`.
 
 ### Plugin Storage
 

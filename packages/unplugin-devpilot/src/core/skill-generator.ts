@@ -5,6 +5,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { getBuiltinToolNames } from './builtin-tools';
 import { buildPluginContext } from './plugin';
+import { parseSkillFrontmatter } from './skill-frontmatter';
 import { resolveModule } from './utils';
 
 /**
@@ -83,17 +84,56 @@ function getCoreSkillFilePath(skillPath: string): string {
   return skillPath;
 }
 
+interface PluginSkillModule extends SkillEntryLocation {
+  namespace: string
+  /** Frontmatter description of the entry file, used to describe the skill in the core skill. */
+  description?: string
+}
+
+interface SkillEntryLocation {
+  path: string
+  isDirectory: boolean
+  hasIndexMd: boolean
+}
+
+/**
+ * Read the skill entry file so its frontmatter can describe the skill in the core skill
+ * Directory skills use index.md, falling back to SKILL.md
+ * Returns undefined when no entry file can be read
+ */
+async function readSkillEntryFile(skill: SkillEntryLocation): Promise<string | undefined> {
+  if (!skill.isDirectory) {
+    return readFileOrUndefined(skill.path);
+  }
+
+  if (skill.hasIndexMd) {
+    const indexContent = await readFileOrUndefined(join(skill.path, 'index.md'));
+    if (indexContent !== undefined) {
+      return indexContent;
+    }
+  }
+
+  return readFileOrUndefined(join(skill.path, 'SKILL.md'));
+}
+
+async function readFileOrUndefined(path: string): Promise<string | undefined> {
+  try {
+    return await fs.readFile(path, 'utf-8');
+  }
+  catch {
+    return undefined;
+  }
+}
+
 /**
  * Get all plugin skill modules
  * Supports file:// URLs (from resolveModule) and direct paths (relative/absolute)
  */
-async function getPluginSkillModules(plugins: DevpilotPlugin[], options: OptionsResolved): Promise<Array<{
-  namespace: string
-  path: string
-  isDirectory: boolean
-  hasIndexMd: boolean
-}>> {
-  const results = [];
+async function getPluginSkillModules(
+  plugins: DevpilotPlugin[],
+  options: OptionsResolved,
+): Promise<PluginSkillModule[]> {
+  const results: PluginSkillModule[] = [];
   for (const p of plugins) {
     if (!p.skillModule) { continue; }
 
@@ -112,11 +152,20 @@ async function getPluginSkillModules(plugins: DevpilotPlugin[], options: Options
     // Check if index.md exists (only for directories)
     const hasIndex = isDir && await hasIndexMd(skillPath);
 
+    const entryContent = await readSkillEntryFile({
+      path: skillPath,
+      isDirectory: isDir,
+      hasIndexMd: hasIndex,
+    });
+
     results.push({
       namespace: p.namespace,
       path: skillPath,
       isDirectory: isDir,
       hasIndexMd: hasIndex,
+      description: entryContent
+        ? parseSkillFrontmatter(entryContent).description
+        : undefined,
     });
   }
   return results;
@@ -180,7 +229,7 @@ async function generateCoreSkillContent(options: OptionsResolved, isDev: boolean
     else {
       linkPath = `./${skill.namespace}.md`;
     }
-    return `- [${skill.namespace}](${linkPath}) - ${skill.namespace} capabilities`;
+    return `- [${skill.namespace}](${linkPath}) - ${skill.description ?? `${skill.namespace} capabilities`}`;
   }).join('\n');
 
   const frontmatter = generateFrontmatter(options);
