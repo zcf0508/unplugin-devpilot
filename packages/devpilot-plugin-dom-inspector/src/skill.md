@@ -5,6 +5,7 @@ allowed-tools: [
   "get_page_snapshot",
   "get_visual_hierarchy",
   "get_element_details",
+  "get_style_sources",
   "click_element",
   "input_text",
   "get_console_logs",
@@ -22,7 +23,7 @@ allowed-tools: [
 | Cost | Tools | Use For |
 |---|---|---|
 | Low | `get_visual_hierarchy`, `click_element`, `input_text`, `scroll_to_element` | Layout overview, trigger interactions |
-| Mid | `get_page_snapshot`, `get_element_details`, `get_console_logs` | DOM with `@eID`, element deep dive, logs |
+| Mid | `get_page_snapshot`, `get_element_details`, `get_style_sources`, `get_console_logs` | DOM with `@eID`, element deep dive, CSS cascade, logs |
 | High | `capture_screenshot` | Visual comparison with design mockups only |
 
 ## Workflows
@@ -54,7 +55,16 @@ get_console_logs(level="error") → add console.info("[BUG]",...) to code
 **Important: `console.log` is NOT captured.** Use `console.info` or higher (`warn`/`error`) for debugging.
 Use prefixes (`[BUG]`, `[PERF]`) + `keyword`/`level` filter to avoid log noise.
 
-### 4. Explore Page Structure
+### 4. Debug CSS Cascade and Interaction States
+
+```
+get_style_sources(selector="e42", properties=["border"]) → edit the applied rule
+get_style_sources(selector="e42", properties=["border-color"], states=["hover"]) → inspect hover without a mouse
+```
+
+`applied` / `partially-applied` identify winners; `overridden`, `invalid`, `inactive`, and `unknown` explain other rules. Simulated states are inferred, not CDP-forced. `unknown` conditions (for example `@container`) are never treated as authoritative winners.
+
+### 5. Explore Page Structure
 
 ```
 get_visual_hierarchy → understand layout (cheap)
@@ -63,8 +73,7 @@ get_visual_hierarchy → understand layout (cheap)
 ```
 
 **Always start with `get_visual_hierarchy`** — cheapest way to understand the page.
-
-### 5. Performance Debugging
+### 6. Performance Debugging
 
 ```
 Add console.time/PerformanceObserver → click_element to trigger
@@ -80,6 +89,7 @@ Add console.time/PerformanceObserver → click_element to trigger
 - **Runtime data?** → `get_console_logs` with `keyword` / `level`
 - **Element off-screen?** → `scroll_to_element` before snapshot
 - **Computed styles / position?** → `get_element_details` + `includeStyles: true` (narrow with `styleProps: ["font-weight"]`; `pseudo: "::before"` for pseudo-elements)
+- **Which rule wins / why is border wrong / hover or focus styles?** → `get_style_sources` with narrow `properties`; add `states` for interaction states
 
 ## Anti-Patterns
 

@@ -37,13 +37,17 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
+    "@csstools/selector-specificity": "^6.0.1",
+    "@jridgewell/trace-mapping": "^0.3.31",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@types/ws": "^8.18.1",
     "@zumer/snapdom": "^2.0.2",
     "birpc": "^4.0.0",
+    "css-tree": "^3.2.1",
     "es-toolkit": "^1.44.0",
     "hookable": "^6.0.1",
     "mitt": "^3.0.1",
+    "postcss-selector-parser": "^7.2.1",
     "unplugin": "^3.0.0",
     "unplugin-devpilot": "workspace:*",
     "unstorage": "^1.17.4",
@@ -51,6 +55,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/css-tree": "^3.2.0",
     "@vitest/browser-playwright": "^4.0.18"
   }
 }

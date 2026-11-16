@@ -162,12 +162,14 @@ import 'virtual:devpilot-client';
 - 视觉布局分析
 - 浏览器控制台日志访问
 - 页面和元素截图捕获
-- 8 个用于网页自动化的 MCP 工具
+- 追踪 CSS 层叠、继承、变量及模拟交互状态中的样式声明来源
+- 9 个用于网页自动化的 MCP 工具
 
 **MCP 工具：**
 - `get_page_snapshot` - 获取 LLM 友好的 DOM 结构（紧凑、高效）
 - `get_visual_hierarchy` - 分析视觉布局层级和覆盖关系
-- `get_element_details` - 获取全面的元素信息（HTML + 可访问性 + 位置）
+- `get_element_details` - 获取全面的元素信息（HTML + 可访问性 + 位置 + 计算样式）
+- `get_style_sources` - 追踪生效和被覆盖的 CSS 声明、继承、变量、source map 及 hover/focus 状态
 - `click_element` - 点击元素
 - `input_text` - 填充表单字段
 - `get_console_logs` - 访问浏览器日志（仅 error/warn/info/debug；不收集 `console.log`）

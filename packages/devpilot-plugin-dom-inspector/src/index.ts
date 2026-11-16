@@ -299,6 +299,29 @@ export default <DevpilotPlugin>{
         },
       ),
 
+      // get_style_sources - 追踪样式声明来源与层叠关系
+      defineMcpToolRegister(
+        'get_style_sources',
+        {
+          title: 'Get Style Sources',
+          description: 'Trace where CSS values come from through matched rules, cascade layers, specificity, inline styles, inheritance, CSS variables, and source maps. Returns applied and overridden declarations. Can statically simulate hover/focus states without human interaction; simulated results are inferred, not browser-forced states. Prefer narrow property lists such as ["border"].',
+          inputSchema: z.object({
+            selector: z.string().describe('Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector. Can match multiple elements.'),
+            properties: z.array(z.string()).min(1).max(50).describe('CSS properties or shorthands to trace, such as ["border", "color"]. Custom properties such as "--accent" are supported.'),
+            states: z.array(z.enum(['hover', 'focus', 'focus-visible', 'focus-within', 'active'])).optional().default([]).describe('Pseudo-classes to simulate together. The result always includes the actual default state first, then the simulated state. Example: ["hover"] or ["focus", "focus-within"].'),
+            pseudo: z.enum(['::before', '::after']).optional().describe('Trace this pseudo-element instead of the originating element'),
+            clientId: z.string().describe('Target client ID. Use list_clients to find available clients.'),
+          }),
+        },
+        async (params) => {
+          const { selector, properties, states, pseudo, clientId } = params;
+          const result = await handleClientRpc(clientId, async (client) => {
+            return await client.rpc.getStyleSources(selector, { properties, states, pseudo });
+          });
+          return toMcpResponse(result);
+        },
+      ),
+
       // get_console_logs - 获取浏览器控制台日志
       defineMcpToolRegister(
         'get_console_logs',

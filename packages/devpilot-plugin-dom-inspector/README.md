@@ -73,7 +73,27 @@ Get comprehensive element information including HTML attributes, accessibility i
   - Optional children tree (accessibility nodes)
   - Optional `styles` / `pseudoStyles` (requested via `includeStyles` / `pseudo`): computed style values keyed by the requested property names; values are browser-resolved (`rgb()`, `px`, ...), not the authored values. `pseudoNote` appears when a requested pseudo-element is not generated
 
-### 4. `click_element`
+### 4. `get_style_sources`
+
+Trace CSS declarations through the cascade, similar to the browser DevTools **Styles** panel. Use this instead of `get_element_details` when the question is not only “what is the final value?”, but “which rule produced it, and what overrides the other rules?”
+
+**Parameters:**
+- `selector` (string): Element identifier (devpilot-id or CSS selector). Can match multiple elements.
+- `properties` (string[], required, max 50): CSS properties or shorthands to trace, such as `["border", "color"]`. Custom properties such as `"--accent"` are supported. Keep this list narrow to limit output size.
+- `states` (array, optional): Pseudo-classes to simulate together: `hover`, `focus`, `focus-visible`, `focus-within`, `active`. The result always includes the actual default state first, followed by the simulated state.
+- `pseudo` (`"::before"` | `"::after"`, optional): Trace a generated pseudo-element.
+- `clientId` (string, **required**): Target client ID.
+
+**Returns, for each element and state:**
+- `computedValue` for the actual state; simulated states intentionally omit it.
+- Declarations in cascade order, including authored shorthand/value, `!important`, specificity, layer, conditions, and Vite/source-map locations when available.
+- `applied`, `partially-applied`, `overridden`, `invalid`, `inactive`, or `unknown` status, plus the affected longhand properties and an override reason. `invalid` means the declaration became invalid at computed-value time (for example, an unresolved `var()` without a fallback), so the property follows `unset` semantics rather than falling back to a lower-priority declaration.
+- `inheritedFrom` for inherited declarations and `variables` for `var()` source chains.
+- `fallback` when the value comes from browser defaults/initial values or cannot be explained by readable stylesheets.
+
+State simulation is static inference: it does not use CDP to force a browser state, run JavaScript event handlers, or produce transition intermediate values. `@container` and other unevaluable conditions are marked `unknown` rather than treated as authoritative winners. Cross-origin stylesheets and user-agent rules are reported through warnings/fallbacks because browsers do not expose all of them through CSSOM. Vite module paths come from `data-vite-dev-id`; original file/line/column positions are available when inline CSS source maps are enabled (for Vite, `css.devSourcemap: true`).
+
+### 5. `click_element`
 
 Click an element by its identifier.
 
@@ -84,7 +104,7 @@ Click an element by its identifier.
 **Returns:**
 - Success status or error message
 
-### 5. `input_text`
+### 6. `input_text`
 
 Input text into an element by its identifier.
 
@@ -96,7 +116,7 @@ Input text into an element by its identifier.
 **Returns:**
 - Success status or error message
 
-### 6. `get_console_logs`
+### 7. `get_console_logs`
 
 Get browser console logs including errors, warnings, info, and debug logs. **`console.log` is NOT captured** — use `console.info` or higher (`warn`/`error`) for debugging. Filters logs by client ID.
 
@@ -111,7 +131,7 @@ Get browser console logs including errors, warnings, info, and debug logs. **`co
 - Captured console logs with timestamps and stack traces
 - Includes errors, warnings, info, and debug messages (NOT `console.log`)
 
-### 7. `capture_screenshot`
+### 8. `capture_screenshot`
 
 Capture a screenshot of the page or a specific element using [SnapDOM](https://github.com/zumerlab/snapdom). Works with any browser (Chrome, Safari, DingTalk, etc).
 
@@ -128,7 +148,7 @@ Capture a screenshot of the page or a specific element using [SnapDOM](https://g
 **Limitations:**
 - This is a client-side DOM capture, not a browser-level screenshot. Cross-origin images without CORS headers (`Access-Control-Allow-Origin`) may appear blank due to browser security restrictions. This is a limitation of all client-side capture libraries (SnapDOM, html2canvas, dom-to-image, etc.), not specific to this tool.
 
-### 8. `scroll_to_element`
+### 9. `scroll_to_element`
 
 Scroll an element into view. Useful when element is in a scrollable container or outside the current viewport.
 
@@ -176,6 +196,19 @@ const hierarchy = await mcp.call('builtin-dom-inspector_get_visual_hierarchy', {
 const details = await mcp.call('builtin-dom-inspector_get_element_details', {
   selector: 'e123', // devpilot-id or CSS selector
   includeChildren: true,
+  clientId: 'c_abc123',
+});
+
+// Trace a button border and then inspect its hover state without a mouse
+const borderSources = await mcp.call('builtin-dom-inspector_get_style_sources', {
+  selector: 'e123',
+  properties: ['border'],
+  clientId: 'c_abc123',
+});
+const hoverSources = await mcp.call('builtin-dom-inspector_get_style_sources', {
+  selector: 'e123',
+  properties: ['border-color', 'background-color'],
+  states: ['hover'],
   clientId: 'c_abc123',
 });
 

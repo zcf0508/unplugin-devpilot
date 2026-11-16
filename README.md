@@ -162,12 +162,14 @@ Built-in DOM inspection plugin offering:
 - Visual layout analysis
 - Browser console log access
 - Page and element screenshot capture
-- 8 MCP tools for web automation
+- CSS declaration tracing through cascade, inheritance, variables, and simulated interaction states
+- 9 MCP tools for web automation
 
 **MCP Tools:**
 - `get_page_snapshot` - Get LLM-friendly DOM structure (compact, token-efficient)
 - `get_visual_hierarchy` - Analyze visual layout hierarchy and coverage
-- `get_element_details` - Get comprehensive element info (HTML + accessibility + position)
+- `get_element_details` - Get comprehensive element info (HTML + accessibility + position + computed styles)
+- `get_style_sources` - Trace applied/overridden CSS declarations, inheritance, variables, source maps, and hover/focus states
 - `click_element` - Click elements
 - `input_text` - Fill form fields
 - `get_console_logs` - Access browser logs (error/warn/info/debug only; `console.log` is NOT captured)

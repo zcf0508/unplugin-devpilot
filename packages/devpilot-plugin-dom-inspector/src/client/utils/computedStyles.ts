@@ -26,7 +26,7 @@ export const DEFAULT_STYLE_PROPS: readonly string[] = [
 ];
 
 // camelCase → kebab-case; custom properties (--) and vendor-prefixed names pass through untouched.
-function normalizePropName(prop: string): string {
+export function normalizePropName(prop: string): string {
   if (prop.startsWith('-')) {
     return prop;
   }

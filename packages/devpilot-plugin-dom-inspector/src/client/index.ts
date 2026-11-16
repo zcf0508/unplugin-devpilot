@@ -9,6 +9,7 @@ import { getDOMTree } from './getDOMTree';
 import { getElementDetails } from './getElementDetails';
 import { getElementInfoById } from './getElementInfoById';
 import { getLayout } from './getLayout';
+import { getStyleSources } from './getStyleSources';
 import { inputTextById } from './inputTextById';
 import { querySelector } from './querySelector';
 import { scrollToElement } from './scrollToElement';
@@ -32,6 +33,9 @@ export const rpcHandlers: DomInspectorRpc = defineRpcHandlers<DomInspectorRpc>({
 
   // Get detailed element information (unified method)
   getElementDetails,
+
+  // Trace matched declarations through the CSS cascade
+  getStyleSources,
 
   querySelector,
 

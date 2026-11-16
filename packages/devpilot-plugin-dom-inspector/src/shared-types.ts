@@ -85,6 +85,104 @@ export interface ElementDetails {
   error?: string
 }
 
+export type SimulatedStyleState = 'hover' | 'focus' | 'focus-visible' | 'focus-within' | 'active';
+
+export interface GetStyleSourcesOptions {
+  /** CSS properties or shorthands to trace. Custom properties are supported. */
+  properties: string[]
+  /** Pseudo-classes to simulate together. The default state is always returned first. */
+  states?: SimulatedStyleState[]
+  /** Trace this generated pseudo-element instead of the element itself. */
+  pseudo?: PseudoElementSelector
+}
+
+export interface StyleElementReference {
+  devpilotId?: string
+  tag: string
+  id?: string
+  class?: string
+}
+
+export interface StyleSourceLocation {
+  /** Original source file when a source map is available, otherwise the CSS module id. */
+  file?: string
+  /** Stylesheet URL for linked or imported stylesheets. */
+  href?: string
+  line?: number
+  column?: number
+  /** Whether line/column points to original source or generated CSS. */
+  position?: 'source' | 'generated'
+}
+
+export type StyleDeclarationStatus = 'applied' | 'partially-applied' | 'overridden' | 'invalid' | 'inactive' | 'unknown';
+
+export interface StyleVariableSource {
+  name: string
+  value?: string
+  element?: StyleElementReference
+  declarations: StyleDeclarationSource[]
+  variables?: StyleVariableSource[]
+  note?: string
+}
+
+export interface StyleDeclarationSource {
+  selector: string
+  /** Selector after resolving CSS nesting and simulated pseudo-classes, when different. */
+  resolvedSelector?: string
+  property: string
+  value: string
+  important: boolean
+  origin: 'inline' | 'author'
+  specificity?: [number, number, number]
+  layer?: string
+  conditions?: string[]
+  status: StyleDeclarationStatus
+  appliedProperties?: string[]
+  overriddenProperties?: string[]
+  invalidProperties?: string[]
+  reason?: string
+  source?: StyleSourceLocation
+  variables?: StyleVariableSource[]
+}
+
+export interface StyleInheritedSource {
+  element: StyleElementReference
+  declarations: StyleDeclarationSource[]
+}
+
+export interface StylePropertySource {
+  property: string
+  /** Browser-resolved value. Only present for the actual, non-simulated state. */
+  computedValue?: string
+  declarations: StyleDeclarationSource[]
+  inheritedFrom?: StyleInheritedSource
+  fallback?: {
+    origin: 'user-agent' | 'initial' | 'unknown'
+    value?: string
+    note: string
+  }
+  notes?: string[]
+}
+
+export interface StyleStateSources {
+  states: SimulatedStyleState[]
+  simulated: boolean
+  properties: StylePropertySource[]
+}
+
+export interface StyleSourcesItem {
+  element: StyleElementReference
+  states: StyleStateSources[]
+}
+
+export interface StyleSourcesResult {
+  success: boolean
+  selector: string
+  elements?: StyleSourcesItem[]
+  warnings?: string[]
+  error?: string
+}
+
 export interface ElementActionResult {
   success: boolean
   error?: string
@@ -204,6 +302,15 @@ export interface DomInspectorRpc {
     selector: string,
     options?: GetElementDetailsOptions,
   ) => Promise<ElementDetails>
+
+  /**
+   * Trace CSS declarations through the cascade, including inheritance and simulated interaction states.
+   * @param selector - Element identifier (devpilot-id or CSS selector). Priority: devpilot-id > CSS selector
+   */
+  getStyleSources: (
+    selector: string,
+    options: GetStyleSourcesOptions,
+  ) => Promise<StyleSourcesResult>
 
   /**
    * Get visual layout hierarchy

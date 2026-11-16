@@ -43,6 +43,7 @@ describe('mCP Tools - Node Side', () => {
           success: true,
           elements: [{ devpilotId: 'e1', tag: 'button', text: 'Submit', attributes: {}, role: 'button', name: 'Submit', rect: { x: 0, y: 0, width: 100, height: 50 } }],
         }),
+        getStyleSources: vi.fn().mockResolvedValue({ success: true, selector: 'e1', elements: [] }),
       },
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
@@ -53,6 +54,7 @@ describe('mCP Tools - Node Side', () => {
       { tool: 'get_visual_hierarchy', args: { clientId: 'c_1', maxDepth: 15 }, mock: mockClient.rpc.getLayout, isJson: false },
       { tool: 'get_page_snapshot', args: { clientId: 'c_1', maxDepth: 5 }, mock: mockClient.rpc.getCompactSnapshot, isJson: false },
       { tool: 'get_element_details', args: { selector: 'e1', clientId: 'c_1' }, mock: mockClient.rpc.getElementDetails, isJson: true },
+      { tool: 'get_style_sources', args: { selector: 'e1', properties: ['border'], clientId: 'c_1' }, mock: mockClient.rpc.getStyleSources, isJson: true },
     ];
 
     for (const { tool, args, mock, isJson } of toolCalls) {
@@ -136,6 +138,32 @@ describe('mCP Tools - Node Side', () => {
     });
   });
 
+  it('get_style_sources should pass properties, states, and pseudo through to the client', async () => {
+    const mockClient = {
+      rpc: {
+        getStyleSources: vi.fn().mockResolvedValue({ success: true, selector: 'e1', elements: [] }),
+      },
+    };
+    vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
+
+    const tools = plugin.mcpSetup?.(createPluginContext()) || [];
+    const toolDef = tools.find(t => t().name === 'get_style_sources');
+    const result = await toolDef!().cb({
+      selector: 'e1',
+      clientId: 'c_1',
+      properties: ['border', '--accent'],
+      states: ['hover', 'focus-within'],
+      pseudo: '::before',
+    } as any);
+
+    expect(mockClient.rpc.getStyleSources).toHaveBeenCalledWith('e1', {
+      properties: ['border', '--accent'],
+      states: ['hover', 'focus-within'],
+      pseudo: '::before',
+    });
+    expect(JSON.parse((result.content[0] as { text: string }).text).success).toBe(true);
+  });
+
   it('all tools should handle errors correctly', async () => {
     const mockClient = {
       rpc: {
@@ -143,12 +171,13 @@ describe('mCP Tools - Node Side', () => {
         getLayout: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getCompactSnapshot: vi.fn().mockRejectedValue(new Error('RPC failed')),
         getElementDetails: vi.fn().mockRejectedValue(new Error('RPC failed')),
+        getStyleSources: vi.fn().mockRejectedValue(new Error('RPC failed')),
       },
     };
     vi.mocked(clientManager.getClient).mockReturnValue(mockClient as any);
 
     const tools = plugin.mcpSetup?.(createPluginContext()) || [];
-    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
+    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details', 'get_style_sources']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_1' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('RPC call failed');
@@ -160,7 +189,7 @@ describe('mCP Tools - Node Side', () => {
     vi.mocked(clientManager.getAllClients).mockReturnValue([]);
 
     const tools = plugin.mcpSetup?.(createPluginContext()) || [];
-    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
+    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details', 'get_style_sources']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ clientId: 'c_nonexistent' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('not found');
@@ -169,7 +198,7 @@ describe('mCP Tools - Node Side', () => {
 
   it('all tools should handle missing clientId', async () => {
     const tools = plugin.mcpSetup?.(createPluginContext()) || [];
-    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details']) {
+    for (const name of ['query_selector', 'get_visual_hierarchy', 'get_page_snapshot', 'get_element_details', 'get_style_sources']) {
       const toolDef = tools.find(t => t().name === name);
       const result = await toolDef!().cb({ selector: '.test' } as any);
       expect(JSON.parse((result.content[0] as { text: string }).text).error).toContain('No client specified');
